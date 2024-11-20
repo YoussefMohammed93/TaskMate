@@ -12,7 +12,7 @@ const Sidebar = ({ className }: SidebarProps) => {
   const pathname = usePathname();
 
   const linkClasses = (path: string) =>
-    `flex items-center px-5 rounded-lg py-2 gap-x-2 mt-0.5 border ${
+    `flex items-center px-3 md:px-5 rounded-lg py-2 gap-x-2 mt-0.5 border ${
       pathname === path
         ? "border"
         : "border-transparent text-muted-foreground hover:border"
