@@ -1,5 +1,6 @@
 import { signIn } from "@/auth";
 import { Button } from "./ui/button";
+import { Github } from "lucide-react";
 
 export const SignInButton = () => {
   return (
@@ -10,8 +11,9 @@ export const SignInButton = () => {
         await signIn("github");
       }}
     >
-      <Button type="submit">
-        <span>Login</span>
+      <Button type="submit" variant="default">
+        <span>Login with github</span>
+        <Github className="size-5" />
       </Button>
     </form>
   );

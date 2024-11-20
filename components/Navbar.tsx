@@ -14,13 +14,21 @@ const Navbar = async () => {
           <div className="w-12 h-12 relative">
             <Image src="/logo.svg" alt="Logo" loading="eager" fill />
           </div>
-          <span className="text-xl font-semibold">TaskMate</span>
+          <span className="text-xl font-semibold">Taskmate</span>
         </Link>
         <div className="flex items-center gap-x-5">
           {session && session?.user ? (
             <div className="flex items-center gap-x-2">
-              <div>{session.user.name}</div>
               <LogOutButton />
+              <div>
+                <Image
+                  src={session?.user?.image || "/avatar.png"}
+                  alt="User"
+                  width={40}
+                  height={40}
+                  className="rounded-full object-cover"
+                />
+              </div>
             </div>
           ) : (
             <SignInButton />

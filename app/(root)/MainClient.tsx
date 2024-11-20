@@ -2,6 +2,8 @@
 
 import { Loader2 } from "lucide-react";
 import { useState, useEffect } from "react";
+import MarktingPage from "./components/MarktingPage";
+import MainPage from "./components/MainPage";
 
 interface MainClientProps {
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -26,18 +28,6 @@ export default function MainClient({ session }: MainClientProps) {
   }
 
   return (
-    <div>
-      {!session ? (
-        <div className="p-5">
-          <h1>Welcome to Our Website</h1>
-          <p>Please log in to access more features.</p>
-        </div>
-      ) : (
-        <div className="p-5">
-          <h1>Welcome, {session.user?.name}!</h1>
-          <p>You are logged in. Here’s your main content.</p>
-        </div>
-      )}
-    </div>
+    <div>{!session ? <MarktingPage /> : <MainPage session={session} />}</div>
   );
 }
