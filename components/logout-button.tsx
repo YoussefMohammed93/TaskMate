@@ -1,5 +1,4 @@
 import { signOut } from "@/auth";
-import { Button } from "./ui/button";
 import { LogOut } from "lucide-react";
 
 export const LogOutButton = () => {
@@ -11,10 +10,10 @@ export const LogOutButton = () => {
         await signOut({ redirectTo: "/" });
       }}
     >
-      <Button type="submit">
+      <button type="submit" className="flex gap-x-2">
+        <LogOut className="size-4" />
         <span>Logout</span>
-        <LogOut className="size-5" />
-      </Button>
+      </button>
     </form>
   );
 };

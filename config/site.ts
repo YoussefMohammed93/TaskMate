@@ -1,4 +1,4 @@
 export const SiteConfig = {
-  name: "TaskMate",
-  description: "Todo website developed by Youssef Mohammed",
+  name: "Taskmate",
+  description: "Taskmate website developed by Youssef Mohammed",
 };
