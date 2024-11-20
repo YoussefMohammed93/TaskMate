@@ -18,7 +18,7 @@ const MarktingPage = () => {
         <h1 className="text-center text-3xl md:text-6xl font-semibold text-neutral-800 mb-6">
           Taskmate helps team move
         </h1>
-        <h2 className="w-3/4 text-center text-3xl md:text-6xl font-semibold p-4 rounded-md text-white bg-gradient-to-r from-fuchsia-500 to-orange-500">
+        <h2 className="w-full md:w-3/4 text-center text-3xl md:text-6xl font-semibold p-4 rounded-md text-white bg-gradient-to-r from-fuchsia-500 to-orange-500">
           <TypingText text="Work forward." />
         </h2>
       </div>

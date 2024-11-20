@@ -17,7 +17,7 @@ const Navbar = async () => {
   const session = await auth();
 
   return (
-    <header className="px-5 sm:px-10 md:px-16 lg:px-24 py-1 border-b shadow-sm">
+    <header className="sticky top-0 z-10 bg-card shadow-sm border-b px-5 sm:px-10 md:px-16 lg:px-24">
       <nav className="flex items-center justify-between">
         <Link href="/" className="flex items-center gap-x-2">
           <div className="w-12 h-12 relative">

@@ -2,8 +2,8 @@
 
 import { Loader2 } from "lucide-react";
 import { useState, useEffect } from "react";
-import MarktingPage from "./components/MarktingPage";
 import MainPage from "./components/MainPage";
+import MarktingPage from "./components/MarktingPage";
 
 interface MainClientProps {
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -21,13 +21,15 @@ export default function MainClient({ session }: MainClientProps) {
 
   if (isLoading) {
     return (
-      <div className="w-full h-[90vh] flex items-center justify-center">
+      <div className="w-full h-[90vh] flex items-center justify-center bg-gray-100">
         <Loader2 className="animate-spin size-8" />
       </div>
     );
   }
 
   return (
-    <div>{!session ? <MarktingPage /> : <MainPage session={session} />}</div>
+    <div className="flex-1">
+      {!session ? <MarktingPage /> : <MainPage session={session} />}
+    </div>
   );
 }
