@@ -70,7 +70,7 @@ export function HowItWorks() {
   if (!mounted) {
     return (
       <section className="relative pb-24 overflow-hidden bg-gradient-to-b from-background to-background/90">
-        <div className="relative mx-auto max-w-[1260px] px-5">
+        <div className="relative mx-auto max-w-[1280px] px-5">
           <div className="text-center mb-16">
             <Skeleton className="h-10 w-[300px] mx-auto mb-4" />
             <Skeleton className="h-6 w-[500px] mx-auto" />

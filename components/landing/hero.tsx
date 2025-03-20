@@ -53,7 +53,7 @@ export function Hero() {
         role="presentation"
         className="absolute top-12 -right-64 w-96 h-96 bg-orange-500/10 dark:bg-primary/10 rounded-full blur-3xl"
       />
-      <div className="relative text-center mx-auto max-w-[1260px] px-5">
+      <div className="relative text-center mx-auto max-w-[1280px] px-5">
         <div
           role="banner"
           className="inline-flex items-center justify-center gap-x-2 bg-secondary dark:bg-primary/10 px-5 py-2 rounded-full mb-10 border"

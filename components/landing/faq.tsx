@@ -45,7 +45,7 @@ export function FAQ() {
         role="presentation"
         className="absolute bottom-1/4 -right-64 w-96 h-96 bg-yellow-500/10 rounded-full blur-3xl"
       />
-      <div className="relative mx-auto max-w-[1260px] px-5">
+      <div className="relative mx-auto max-w-[1280px] px-5">
         <div className="text-center mb-16">
           <h2 className="text-3xl font-bold tracking-tight sm:text-4xl bg-gradient-to-b from-foreground to-foreground/70 bg-clip-text text-transparent">
             Frequently Asked Questions

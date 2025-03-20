@@ -82,7 +82,7 @@ export function AppSidebar() {
 
   const renderHeader = () => {
     return (
-      <div className="flex flex-col min-w-0 px-2">
+      <div className="flex flex-col min-w-0 px-2 pt-1">
         {currentUser ? (
           <>
             <span className="font-semibold truncate">
@@ -104,7 +104,7 @@ export function AppSidebar() {
 
   return (
     <Sidebar>
-      <SidebarHeader className="border-b dark:bg-secondary">
+      <SidebarHeader className="border-b dark:bg-secondary h-[63px]">
         {renderHeader()}
       </SidebarHeader>
       <SidebarContent className="dark:bg-secondary">
