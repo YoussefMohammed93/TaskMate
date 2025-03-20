@@ -1,27 +1,11 @@
 "use client";
 
-import { Button } from "@/components/ui/button";
-import { ModeToggle } from "@/components/mode-toggle";
-import { SignedIn, SignedOut, SignInButton, UserButton } from "@clerk/nextjs";
+import { Header } from "@/components/header";
 
 export default function Main() {
   return (
-    <main className="p-5">
-      <SignedOut>
-        <SignInButton />
-      </SignedOut>
-      <SignedIn>
-        <UserButton />
-      </SignedIn>
-      <Button
-        className="m-10"
-        onClick={() => {
-          alert("Hello!");
-        }}
-      >
-        Click Me
-      </Button>
-      <ModeToggle />
-    </main>
+    <>
+      <Header />
+    </>
   );
 }
