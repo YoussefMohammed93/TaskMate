@@ -1,8 +1,9 @@
 "use client";
 
-import { Features } from "@/components/landing/features";
-import { Header } from "@/components/landing/header";
 import { Hero } from "@/components/landing/hero";
+import { Header } from "@/components/landing/header";
+import { Features } from "@/components/landing/features";
+import { HowItWorks } from "@/components/landing/how-it-works";
 
 export default function Main() {
   return (
@@ -10,6 +11,7 @@ export default function Main() {
       <Header />
       <Hero />
       <Features />
+      <HowItWorks />
     </>
   );
 }

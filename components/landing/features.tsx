@@ -70,11 +70,11 @@ export function Features() {
     >
       <div
         role="presentation"
-        className="hidden dark:block absolute top-3/12 -left-64 w-96 h-96 bg-accent-foreground/15 dark:bg-primary/15 rounded-full blur-3xl"
+        className="dark:block absolute top-3/12 -left-64 w-96 h-96 bg-pink-500/15 rounded-full blur-3xl"
       />
       <div
         role="presentation"
-        className="hidden dark:block absolute top-1/2 -right-64 w-96 h-96 bg-accent-foreground/10 dark:bg-primary/10 rounded-full blur-3xl"
+        className="dark:block absolute top-1/6 -right-64 w-96 h-96 bg-purple-500/10 rounded-full blur-3xl"
       />
       <div className="relative mx-auto max-w-[1260px] px-5">
         <div className="text-center mb-16">
