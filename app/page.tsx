@@ -1,3 +1,6 @@
+"use client";
+
+import { Button } from "@/components/ui/button";
 import { SignedIn, SignedOut, SignInButton, UserButton } from "@clerk/nextjs";
 
 export default function Main() {
@@ -9,6 +12,14 @@ export default function Main() {
       <SignedIn>
         <UserButton />
       </SignedIn>
+      <Button
+        className="m-10"
+        onClick={() => {
+          alert("Hello!");
+        }}
+      >
+        Click Me
+      </Button>
     </main>
   );
 }
