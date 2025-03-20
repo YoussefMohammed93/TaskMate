@@ -1,9 +1,9 @@
 "use client";
 
 import { toast } from "sonner";
-import { useState } from "react";
 import { cn } from "@/lib/utils";
 import { useForm } from "@formspree/react";
+import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Separator } from "@/components/ui/separator";
 import { Send, Mail, User, MessageSquare } from "lucide-react";
@@ -28,6 +28,15 @@ export function ContactUs() {
   });
   const [errors, setErrors] = useState<FormErrors>({});
   const [state, formspreeHandleSubmit] = useForm("xaneqlqz");
+
+  useEffect(() => {
+    if (state.succeeded) {
+      setFormData({ name: "", email: "", message: "" });
+      toast.success("Message sent successfully!", {
+        description: "We'll get back to you within 24 hours.",
+      });
+    }
+  }, [state.succeeded]);
 
   const validateForm = (): boolean => {
     const newErrors: FormErrors = {};
@@ -60,12 +69,8 @@ export function ContactUs() {
     try {
       await formspreeHandleSubmit(e);
 
-      if (state.succeeded) {
-        setFormData({ name: "", email: "", message: "" });
-
-        toast.success("Message sent successfully!", {
-          description: "We'll get back to you within 24 hours.",
-        });
+      if (!state.succeeded) {
+        throw new Error("Form submission failed");
       }
     } catch (error) {
       console.log(error);
