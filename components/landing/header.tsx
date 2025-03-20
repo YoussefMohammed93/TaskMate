@@ -1,5 +1,5 @@
-import { Logo } from "./logo";
-import UserButton from "./user-button";
+import { Logo } from "../logo";
+import UserButton from "../user-button";
 
 export const Header = () => {
   return (
