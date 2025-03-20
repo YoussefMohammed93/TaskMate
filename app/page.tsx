@@ -1,6 +1,7 @@
 "use client";
 
 import { Button } from "@/components/ui/button";
+import { ModeToggle } from "@/components/mode-toggle";
 import { SignedIn, SignedOut, SignInButton, UserButton } from "@clerk/nextjs";
 
 export default function Main() {
@@ -20,6 +21,7 @@ export default function Main() {
       >
         Click Me
       </Button>
+      <ModeToggle />
     </main>
   );
 }
