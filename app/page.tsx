@@ -1,5 +1,6 @@
 "use client";
 
+import { FAQ } from "@/components/landing/faq";
 import { Hero } from "@/components/landing/hero";
 import { Header } from "@/components/landing/header";
 import { Features } from "@/components/landing/features";
@@ -12,6 +13,7 @@ export default function Main() {
       <Hero />
       <Features />
       <HowItWorks />
+      <FAQ />
     </>
   );
 }

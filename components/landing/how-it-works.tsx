@@ -1,20 +1,22 @@
 "use client";
 
 import {
-  Check,
-  ListTodo,
+  Sun,
+  Moon,
   Timer,
+  Check,
+  Monitor,
+  ListTodo,
   Settings,
   ArrowRight,
   ChevronRight,
   CircleCheck,
-  Sun,
-  Moon,
 } from "lucide-react";
 import Link from "next/link";
 import { cn } from "@/lib/utils";
 import { useTheme } from "next-themes";
 import { useState, useEffect } from "react";
+import { Skeleton } from "@/components/ui/skeleton";
 
 const steps = [
   {
@@ -66,7 +68,71 @@ export function HowItWorks() {
   }, []);
 
   if (!mounted) {
-    return null;
+    return (
+      <section className="relative pb-24 overflow-hidden bg-gradient-to-b from-background to-background/90">
+        <div className="relative mx-auto max-w-[1260px] px-6">
+          <div className="text-center mb-16">
+            <Skeleton className="h-10 w-[300px] mx-auto mb-4" />
+            <Skeleton className="h-6 w-[500px] mx-auto" />
+          </div>
+          <div className="grid grid-cols-1 lg:grid-cols-12 gap-5">
+            <div className="lg:col-span-5">
+              <div className="bg-card backdrop-blur-sm border rounded-xl p-6">
+                {[1, 2, 3, 4].map((_, idx) => (
+                  <div
+                    key={idx}
+                    className={cn(
+                      "group flex items-start p-4 rounded-lg",
+                      idx < 3 && "mb-2"
+                    )}
+                  >
+                    <Skeleton className="size-10 rounded-lg shrink-0 mr-4" />
+                    <div className="flex-1">
+                      <Skeleton className="h-6 w-32 mb-2" />
+                      <Skeleton className="h-4 w-full max-w-[200px]" />
+                    </div>
+                    <Skeleton className="size-5 shrink-0 self-center ml-2" />
+                  </div>
+                ))}
+              </div>
+            </div>
+            <div className="lg:col-span-7">
+              <div className="rounded-2xl bg-card border pb-[26px]">
+                <div className="p-8">
+                  <Skeleton className="size-16 rounded-2xl mb-6" />
+                  <Skeleton className="h-9 w-64 mb-4" />
+                  <Skeleton className="h-5 w-full mb-8" />
+                  <div className="mb-6">
+                    <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
+                      {[1, 2, 3].map((i) => (
+                        <div
+                          key={i}
+                          className="bg-background rounded-lg p-3 border"
+                        >
+                          <Skeleton className="h-2 w-12 mb-2" />
+                          <Skeleton className="h-2 w-16" />
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                  <div className="flex justify-between items-center">
+                    <div>
+                      <Skeleton className="h-4 w-24 mb-2" />
+                      <div className="flex space-x-1">
+                        {[1, 2, 3, 4].map((i) => (
+                          <Skeleton key={i} className="size-2 rounded-full" />
+                        ))}
+                      </div>
+                    </div>
+                    <Skeleton className="h-9 w-28 rounded-lg" />
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+    );
   }
 
   return (
@@ -227,11 +293,31 @@ export function HowItWorks() {
                         </div>
                       )}
                       {idx === 2 && (
-                        <div className="grid grid-cols-2 gap-3">
+                        <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
                           <button
                             type="button"
                             className={cn(
-                              "rounded-lg p-3 flex items-center justify-between cursor-pointer transition-colors w-full",
+                              "rounded-lg p-2 sm:p-3 flex items-center justify-between cursor-pointer transition-colors w-full",
+                              "bg-background border",
+                              theme === "system" &&
+                                "bg-primary/5 text-primary border-primary/50"
+                            )}
+                            onClick={() => setTheme("system")}
+                          >
+                            <div className="flex items-center">
+                              <Monitor className="size-4 sm:size-5 mr-1.5 sm:mr-2" />
+                              <span className="text-xs sm:text-sm font-medium">
+                                System
+                              </span>
+                            </div>
+                            {theme === "system" && (
+                              <Check className="size-3 sm:size-4" />
+                            )}
+                          </button>
+                          <button
+                            type="button"
+                            className={cn(
+                              "rounded-lg p-2 sm:p-3 flex items-center justify-between cursor-pointer transition-colors w-full",
                               "bg-background border",
                               theme === "light" &&
                                 "bg-primary/5 text-primary border-primary/50"
@@ -239,15 +325,19 @@ export function HowItWorks() {
                             onClick={() => setTheme("light")}
                           >
                             <div className="flex items-center">
-                              <Sun className="size-5 mr-2" />
-                              <span className="text-sm font-medium">Light</span>
+                              <Sun className="size-4 sm:size-5 mr-1.5 sm:mr-2" />
+                              <span className="text-xs sm:text-sm font-medium">
+                                Light
+                              </span>
                             </div>
-                            {theme === "light" && <Check className="size-4" />}
+                            {theme === "light" && (
+                              <Check className="size-3 sm:size-4" />
+                            )}
                           </button>
                           <button
                             type="button"
                             className={cn(
-                              "rounded-lg p-3 flex items-center justify-between cursor-pointer transition-colors w-full",
+                              "rounded-lg p-2 sm:p-3 flex items-center justify-between cursor-pointer transition-colors w-full",
                               "bg-background border",
                               theme === "dark" &&
                                 "bg-primary/5 text-primary border-primary/50"
@@ -255,10 +345,14 @@ export function HowItWorks() {
                             onClick={() => setTheme("dark")}
                           >
                             <div className="flex items-center">
-                              <Moon className="size-5 mr-2" />
-                              <span className="text-sm font-medium">Dark</span>
+                              <Moon className="size-4 sm:size-5 mr-1.5 sm:mr-2" />
+                              <span className="text-xs sm:text-sm font-medium">
+                                Dark
+                              </span>
                             </div>
-                            {theme === "dark" && <Check className="size-4" />}
+                            {theme === "dark" && (
+                              <Check className="size-3 sm:size-4" />
+                            )}
                           </button>
                         </div>
                       )}
@@ -282,7 +376,7 @@ export function HowItWorks() {
                         <span className="text-sm text-muted-foreground">
                           Step {idx + 1} of {steps.length}
                         </span>
-                        <div className="flex space-x-1 mt-1">
+                        <div className="flex space-x-1 mt-2">
                           {steps.map((_, dotIdx) => (
                             <div
                               key={dotIdx}
