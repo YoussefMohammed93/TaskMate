@@ -194,10 +194,12 @@ export default function Dashboard() {
   };
 
   return (
-    <div className="p-2 sm:p-4">
+    <div>
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-5">
         <div>
-          <h1 className="text-2xl sm:text-3xl">Welcome back, Youssef!</h1>
+          <h1 className="text-2xl sm:text-3xl font-light">
+            Welcome back, Youssef!
+          </h1>
         </div>
         <div className="flex items-center gap-2 sm:gap-3">
           <Button variant="outline" size="icon" className="relative">

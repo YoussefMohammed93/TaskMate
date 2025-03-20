@@ -233,12 +233,6 @@ export function HowItWorks() {
                     display: activeStep === idx ? "block" : "none",
                   }}
                 >
-                  <div
-                    className={cn(
-                      "h-2 w-full",
-                      step.color.replace("text-", "bg-")
-                    )}
-                  />
                   <div className="p-8">
                     <div
                       className={cn(
