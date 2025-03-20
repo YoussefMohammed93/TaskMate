@@ -6,8 +6,8 @@ import {
   LogOut,
   Monitor,
   Moon,
+  Settings,
   Sun,
-  UserIcon,
 } from "lucide-react";
 import {
   DropdownMenu,
@@ -78,12 +78,6 @@ export default function UserButton({ className }: UserButtonProps) {
           Logged in as @{currentUser?.firstName} {""} {currentUser?.lastName}
         </DropdownMenuLabel>
         <DropdownMenuSeparator />
-        <Link href={`/users/${currentUser?._id}`}>
-          <DropdownMenuItem>
-            <UserIcon className="size-4" />
-            Profile
-          </DropdownMenuItem>
-        </Link>
         <DropdownMenuSub>
           <DropdownMenuSubTrigger>
             <Monitor className="size-4" />
@@ -109,6 +103,12 @@ export default function UserButton({ className }: UserButtonProps) {
             </DropdownMenuSubContent>
           </DropdownMenuPortal>
         </DropdownMenuSub>
+        <Link href="/settings">
+          <DropdownMenuItem>
+            <Settings className="size-4" />
+            Settings
+          </DropdownMenuItem>
+        </Link>
         <Separator className="my-1" />
         <DropdownMenuItem onClick={() => handleSignout()}>
           <LogOut className="size-4" />
