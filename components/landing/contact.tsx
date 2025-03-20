@@ -66,18 +66,7 @@ export function ContactUs() {
 
     if (!validateForm()) return;
 
-    try {
-      await formspreeHandleSubmit(e);
-
-      if (!state.succeeded) {
-        throw new Error("Form submission failed");
-      }
-    } catch (error) {
-      console.log(error);
-      toast.error("Failed to send message", {
-        description: "Please try again later.",
-      });
-    }
+    formspreeHandleSubmit(e);
   };
 
   return (
@@ -86,7 +75,15 @@ export function ContactUs() {
       className="relative pb-20 overflow-hidden bg-background"
       aria-label="Contact Us Section"
     >
-      <div className="relative mx-auto max-w-7xl px-6">
+      <div
+        role="presentation"
+        className="absolute top-1/4 -left-64 w-96 h-96 bg-blue-500/10 rounded-full blur-3xl"
+      />
+      <div
+        role="presentation"
+        className="absolute bottom-1/4 -right-64 w-96 h-96 bg-red-500/10 rounded-full blur-3xl"
+      />
+      <div className="relative mx-auto max-w-[1260px] px-5">
         <div className="max-w-2xl mx-auto text-center mb-16">
           <h2 className="text-3xl font-bold tracking-tight sm:text-4xl bg-gradient-to-r from-primary to-primary/70 bg-clip-text text-transparent">
             Let&apos;s Start a Conversation
@@ -97,7 +94,7 @@ export function ContactUs() {
           </p>
         </div>
         <div className="max-w-4xl mx-auto">
-          <div className="rounded-2xl border bg-card/50 backdrop-blur-sm shadow-sm">
+          <div className="rounded-2xl border bg-card dark:bg-secondary backdrop-blur-sm">
             <div className="p-8 md:p-12">
               <div className="grid md:grid-cols-2 gap-12">
                 <div className="space-y-6">
@@ -242,7 +239,7 @@ export function ContactUs() {
                     <Button
                       type="submit"
                       disabled={state.submitting}
-                      className="w-full transition-all duration-200 hover:scale-[1.02]"
+                      className="w-full disabled:opacity-50"
                     >
                       {state.submitting ? (
                         "Sending..."

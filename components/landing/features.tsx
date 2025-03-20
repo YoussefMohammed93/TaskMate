@@ -93,7 +93,7 @@ export function Features() {
               className="relative group h-full"
               style={{ animationDelay: `${index * 100}ms` }}
             >
-              <div className="relative p-6 bg-card rounded-2xl border transition-all duration-300 h-full flex flex-col">
+              <div className="relative p-6 bg-card dark:bg-secondary rounded-2xl border transition-all duration-300 h-full flex flex-col">
                 <div
                   className={cn(
                     "absolute inset-0 rounded-2xl opacity-0 group-hover:opacity-100 transition-opacity duration-300",

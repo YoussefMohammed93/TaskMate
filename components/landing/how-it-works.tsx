@@ -70,14 +70,14 @@ export function HowItWorks() {
   if (!mounted) {
     return (
       <section className="relative pb-24 overflow-hidden bg-gradient-to-b from-background to-background/90">
-        <div className="relative mx-auto max-w-[1260px] px-6">
+        <div className="relative mx-auto max-w-[1260px] px-5">
           <div className="text-center mb-16">
             <Skeleton className="h-10 w-[300px] mx-auto mb-4" />
             <Skeleton className="h-6 w-[500px] mx-auto" />
           </div>
           <div className="grid grid-cols-1 lg:grid-cols-12 gap-5">
             <div className="lg:col-span-5">
-              <div className="bg-card backdrop-blur-sm border rounded-xl p-6">
+              <div className="bg-card dark:bg-secondary backdrop-blur-sm border rounded-xl p-6">
                 {[1, 2, 3, 4].map((_, idx) => (
                   <div
                     key={idx}
@@ -97,7 +97,7 @@ export function HowItWorks() {
               </div>
             </div>
             <div className="lg:col-span-7">
-              <div className="rounded-2xl bg-card border pb-[26px]">
+              <div className="rounded-2xl bg-card dark:bg-secondary border pb-[26px]">
                 <div className="p-8">
                   <Skeleton className="size-16 rounded-2xl mb-6" />
                   <Skeleton className="h-9 w-64 mb-4" />
@@ -149,7 +149,7 @@ export function HowItWorks() {
         role="presentation"
         className="dark:block absolute bottom-1/4 -right-64 w-96 h-96 bg-green-500/10 rounded-full blur-3xl"
       />
-      <div className="relative mx-auto max-w-[1260px] px-6">
+      <div className="relative mx-auto max-w-[1260px] px-5">
         <div className="text-center mb-16">
           <h2 className="text-3xl font-bold tracking-tight sm:text-4xl bg-gradient-to-b from-foreground to-foreground/70 bg-clip-text text-transparent">
             How TaskMate Works
@@ -161,7 +161,7 @@ export function HowItWorks() {
         </div>
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-5">
           <div className="lg:col-span-5 h-full">
-            <div className="bg-card backdrop-blur-sm border rounded-xl p-6 sticky top-24 h-full">
+            <div className="bg-card dark:bg-secondary backdrop-blur-sm border rounded-xl p-6 sticky top-24 h-full">
               {steps.map((step, idx) => (
                 <div
                   key={`nav-${step.title}`}
@@ -223,7 +223,7 @@ export function HowItWorks() {
                 <div
                   key={`detail-${step.title}`}
                   className={cn(
-                    "group rounded-2xl bg-card border transition-all duration-500 overflow-hidden",
+                    "group rounded-2xl bg-card dark:bg-secondary border transition-all duration-500 overflow-hidden",
                     activeStep === idx
                       ? "opacity-100 scale-100"
                       : "opacity-0 scale-95 absolute top-0 left-0 right-0",
