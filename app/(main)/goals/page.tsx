@@ -502,7 +502,7 @@ export default function Goals() {
         <SheetContent
           side="right"
           className={cn(
-            "overflow-y-auto sheet",
+            "overflow-y-auto sheet border-none",
             isMobile && "w-full max-w-none"
           )}
         >
@@ -625,7 +625,7 @@ export default function Goals() {
                 <Plus className="h-4 w-4" /> Create New Goal
               </Button>
             </DialogTrigger>
-            <DialogContent className="sm:max-w-[625px] max-h-[90vh] overflow-y-auto">
+            <DialogContent className="sm:max-w-[625px] max-h-[80vh] sm:max-h-[90vh] overflow-y-auto">
               <DialogHeader>
                 <DialogTitle>Create New Goal</DialogTitle>
               </DialogHeader>
@@ -967,7 +967,7 @@ export default function Goals() {
         </DialogContent>
       </Dialog>
       <Dialog open={isEditDialogOpen} onOpenChange={setIsEditDialogOpen}>
-        <DialogContent className="sm:max-w-[625px] max-h-[90vh] overflow-y-auto">
+        <DialogContent className="sm:max-w-[625px] max-h-[80vh] sm:max-h-[90vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle>Edit Goal</DialogTitle>
           </DialogHeader>

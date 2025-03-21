@@ -353,7 +353,7 @@ export default function Notes() {
                   New Note
                 </Button>
               </DialogTrigger>
-              <DialogContent className="sm:max-w-[625px] max-h-[90vh] overflow-y-auto">
+              <DialogContent className="sm:max-w-[625px] max-h-[80vh] sm:max-h-[90vh] overflow-y-auto">
                 <DialogHeader>
                   <DialogTitle>Create New Note</DialogTitle>
                 </DialogHeader>
@@ -775,7 +775,7 @@ function NoteCard({ note, onPin, onDelete }: NoteCardProps) {
         <SheetContent
           side="right"
           className={cn(
-            "overflow-y-auto sheet",
+            "overflow-y-auto sheet border-none",
             isMobile ? "w-full max-w-none" : "w-[500px] max-w-[500px]"
           )}
         >
@@ -860,7 +860,7 @@ function NoteCard({ note, onPin, onDelete }: NoteCardProps) {
 
       {/* Existing Edit Dialog */}
       <Dialog open={isEditDialogOpen} onOpenChange={setIsEditDialogOpen}>
-        <DialogContent className="sm:max-w-[625px] max-h-[90vh] overflow-y-auto">
+        <DialogContent className="sm:max-w-[625px] max-h-[80vh] sm:max-h-[90vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle>Edit Note</DialogTitle>
           </DialogHeader>

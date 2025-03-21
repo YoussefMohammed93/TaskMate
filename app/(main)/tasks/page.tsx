@@ -53,6 +53,13 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
+import {
+  Sheet,
+  SheetContent,
+  SheetHeader,
+  SheetOverlay,
+  SheetTitle,
+} from "@/components/ui/sheet";
 import { cn } from "@/lib/utils";
 import { format } from "date-fns";
 import {
@@ -67,8 +74,12 @@ import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Switch } from "@/components/ui/switch";
+import { useIsMobile } from "@/hooks/use-mobile";
 import { Textarea } from "@/components/ui/textarea";
+import { Checkbox } from "@/components/ui/checkbox";
+import { EditTaskDialog } from "./components/edit-task-dialog";
 import { addMonths, addDays, addWeeks, setDay } from "date-fns";
+import { DeleteTaskDialog } from "./components/delete-task-dialog";
 import { Calendar as CalendarComponent } from "@/components/ui/calendar";
 
 type ViewType = "table" | "board" | "cards";
@@ -88,7 +99,7 @@ interface Subtask {
 type RecurrenceFrequency = "daily" | "weekly" | "monthly" | "custom";
 
 interface Task {
-  id: number;
+  id: string;
   title: string;
   description: string;
   priority: string;
@@ -232,7 +243,7 @@ const RecurringIndicator = ({
 
 const exampleTasks: Task[] = [
   {
-    id: 1,
+    id: "1",
     title: "Complete project presentation",
     description: "Prepare slides and demo for the quarterly review meeting",
     priority: "high",
@@ -249,7 +260,7 @@ const exampleTasks: Task[] = [
     ],
   },
   {
-    id: 2,
+    id: "2",
     title: "Review documentation",
     description: "Review and update project documentation",
     priority: "medium",
@@ -263,7 +274,7 @@ const exampleTasks: Task[] = [
     ],
   },
   {
-    id: 3,
+    id: "3",
     title: "Team meeting notes",
     description: "Write up and share meeting notes",
     priority: "low",
@@ -277,7 +288,7 @@ const exampleTasks: Task[] = [
     ],
   },
   {
-    id: 4,
+    id: "4",
     title: "Weekly Team Meeting",
     description: "Regular team sync-up meeting",
     priority: "medium",
@@ -297,7 +308,7 @@ const exampleTasks: Task[] = [
     },
   },
   {
-    id: 5,
+    id: "5",
     title: "Team Stand-up",
     description: "Daily team sync meeting",
     priority: "medium",
@@ -313,7 +324,7 @@ const exampleTasks: Task[] = [
     },
   },
   {
-    id: 6,
+    id: "6",
     title: "Weekly Report",
     description: "Submit weekly progress report",
     priority: "high",
@@ -330,7 +341,7 @@ const exampleTasks: Task[] = [
     },
   },
   {
-    id: 7,
+    id: "7",
     title: "Monthly Budget Review",
     description: "Review and adjust monthly budget",
     priority: "high",
@@ -349,7 +360,7 @@ const exampleTasks: Task[] = [
 ];
 
 interface Task {
-  id: number;
+  id: string;
   title: string;
   description: string;
   priority: string;
@@ -856,336 +867,54 @@ const TaskActions = ({
 }: TaskActionsProps) => {
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
   const [editedTask, setEditedTask] = useState(task);
-  const [date, setDate] = useState<Date>(task.dueDate);
-  const [isAddingCustomCategory, setIsAddingCustomCategory] = useState(false);
-  const [newCustomCategory, setNewCustomCategory] = useState({
-    name: "",
-    color: categoryColors[0].value,
-  });
+  const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
+
+  const handleSaveTask = (updatedTask: Task) => {
+    setTasks((prevTasks: Task[]) =>
+      prevTasks.map((t) => (t.id === task.id ? updatedTask : t))
+    );
+  };
 
   return (
     <div className="flex items-center gap-2">
-      <Dialog>
-        <DialogTrigger asChild>
-          <Button variant="outline" size="icon" className="h-8 w-8">
-            <Pencil className="h-4 w-4" />
-          </Button>
-        </DialogTrigger>
-        <DialogContent className="sm:max-w-[625px] max-h-[90vh] overflow-y-auto">
-          <DialogHeader>
-            <DialogTitle>Edit Task</DialogTitle>
-          </DialogHeader>
-          <div className="grid gap-4 py-4">
-            <div className="grid gap-2">
-              <Label htmlFor="edit-task-name">Task Name</Label>
-              <Input
-                id="edit-task-name"
-                value={editedTask.title}
-                onChange={(e) =>
-                  setEditedTask({ ...editedTask, title: e.target.value })
-                }
-              />
-            </div>
-            <div className="grid gap-2">
-              <Label htmlFor="edit-description">Description</Label>
-              <Textarea
-                id="edit-description"
-                value={editedTask.description}
-                onChange={(e) =>
-                  setEditedTask({ ...editedTask, description: e.target.value })
-                }
-              />
-            </div>
-            <div className="grid grid-cols-1 items-start gap-4">
-              <div className="grid gap-2">
-                <Label>Priority</Label>
-                <Select
-                  value={editedTask.priority}
-                  onValueChange={(value) =>
-                    setEditedTask({ ...editedTask, priority: value })
-                  }
-                >
-                  <SelectTrigger>
-                    <SelectValue placeholder="Select priority" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {priorities.map((priority) => (
-                      <SelectItem
-                        key={priority.value}
-                        value={priority.value}
-                        className={priority.color}
-                      >
-                        {priority.label}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-              <div className="grid gap-2">
-                <Label>Category</Label>
-                {!isAddingCustomCategory ? (
-                  <Select
-                    value={editedTask.category}
-                    onValueChange={(value) => {
-                      if (value === "custom") {
-                        setIsAddingCustomCategory(true);
-                      } else {
-                        setEditedTask({ ...editedTask, category: value });
-                      }
-                    }}
-                  >
-                    <SelectTrigger>
-                      <SelectValue placeholder="Select category" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {categories.map((category) => (
-                        <SelectItem
-                          key={category}
-                          value={category.toLowerCase()}
-                        >
-                          {category}
-                        </SelectItem>
-                      ))}
-                      {customCategories.map((category) => (
-                        <SelectItem
-                          key={category.name}
-                          value={category.name.toLowerCase()}
-                          className={category.color}
-                        >
-                          {category.name}
-                        </SelectItem>
-                      ))}
-                      <SelectSeparator />
-                      <SelectItem value="custom">
-                        + Add Custom Category
-                      </SelectItem>
-                    </SelectContent>
-                  </Select>
-                ) : (
-                  <div className="space-y-4">
-                    <div className="flex flex-col sm:flex-row gap-2">
-                      <div className="flex-1 space-y-2">
-                        <Input
-                          placeholder="Enter category name"
-                          value={newCustomCategory.name}
-                          onChange={(e) =>
-                            setNewCustomCategory({
-                              ...newCustomCategory,
-                              name: e.target.value,
-                            })
-                          }
-                        />
-                      </div>
-                      <Select
-                        value={newCustomCategory.color}
-                        onValueChange={(value) =>
-                          setNewCustomCategory({
-                            ...newCustomCategory,
-                            color: value as CategoryColor,
-                          })
-                        }
-                      >
-                        <SelectTrigger className="w-full sm:w-[180px]">
-                          <SelectValue placeholder="Select color" />
-                        </SelectTrigger>
-                        <SelectContent>
-                          {categoryColors.map((color) => (
-                            <SelectItem
-                              key={color.value}
-                              value={color.value}
-                              className="bg-transparent"
-                            >
-                              <div className="flex items-center gap-2">
-                                <div
-                                  className={cn(
-                                    "w-3 h-3 rounded-full",
-                                    color.value
-                                  )}
-                                />
-                                {color.label}
-                              </div>
-                            </SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
-                    </div>
-                    <div className="flex flex-col sm:flex-row gap-2">
-                      <Button
-                        variant="outline"
-                        className="w-full sm:w-auto order-2 sm:order-1"
-                        onClick={() => {
-                          setIsAddingCustomCategory(false);
-                          setNewCustomCategory({
-                            name: "",
-                            color: categoryColors[0].value,
-                          });
-                        }}
-                      >
-                        Cancel
-                      </Button>
-                      <Button
-                        className="w-full sm:w-auto order-1 sm:order-2"
-                        disabled={newCustomCategory.name.length < 3}
-                        onClick={() => {
-                          const newCategory = {
-                            name: newCustomCategory.name,
-                            color: newCustomCategory.color,
-                          };
-                          setCustomCategories([
-                            ...customCategories,
-                            newCategory,
-                          ]);
-                          setEditedTask({
-                            ...editedTask,
-                            category: newCustomCategory.name.toLowerCase(),
-                          });
-                          setIsAddingCustomCategory(false);
-                          setNewCustomCategory({
-                            name: "",
-                            color: categoryColors[0].value,
-                          });
-                        }}
-                      >
-                        Add Category
-                      </Button>
-                    </div>
-                  </div>
-                )}
-              </div>
-            </div>
-            <div className="grid gap-2">
-              <Label>Due Date</Label>
-              <Dialog>
-                <DialogTrigger asChild>
-                  <Button
-                    variant="outline"
-                    className={cn(
-                      "w-full justify-start text-left font-normal",
-                      !date && "text-muted-foreground"
-                    )}
-                  >
-                    <Calendar className="mr-2 h-4 w-4" />
-                    {format(date, "PPP")}
-                  </Button>
-                </DialogTrigger>
-                <DialogContent className="sm:max-w-[300px] p-0">
-                  <DialogHeader className="px-4 pt-4">
-                    <DialogTitle>Select Date</DialogTitle>
-                  </DialogHeader>
-                  <div className="flex items-center justify-center p-4 pt-0">
-                    <CalendarComponent
-                      mode="single"
-                      selected={date}
-                      onSelect={(newDate) => {
-                        if (newDate) {
-                          setDate(newDate);
-                          setEditedTask({ ...editedTask, dueDate: newDate });
-                          const closeButton = document.querySelector(
-                            "[data-dialog-close]"
-                          );
-                          if (closeButton instanceof HTMLElement) {
-                            closeButton.click();
-                          }
-                        }
-                      }}
-                      initialFocus
-                    />
-                  </div>
-                </DialogContent>
-              </Dialog>
-            </div>
-            <div className="grid gap-2">
-              <Label>Tags</Label>
-              <div className="flex flex-wrap gap-2">
-                {editedTask.tags?.map((tag) => (
-                  <TagBadge
-                    key={tag.id}
-                    tag={tag}
-                    onRemove={() => {
-                      setEditedTask({
-                        ...editedTask,
-                        tags: editedTask.tags.filter((t) => t.id !== tag.id),
-                      });
-                    }}
-                  />
-                ))}
-              </div>
-              <TagSelect
-                selectedTags={editedTask.tags || []}
-                onTagSelect={(tag) => {
-                  setEditedTask({
-                    ...editedTask,
-                    tags: [...(editedTask.tags || []), tag],
-                  });
-                }}
-              />
-            </div>
-            <div className="grid gap-2">
-              <RecurrenceSelector
-                value={editedTask.recurrence ?? null}
-                onChange={(pattern) =>
-                  setEditedTask({ ...editedTask, recurrence: pattern })
-                }
-              />
-            </div>
-          </div>
-          <DialogFooter>
-            <DialogClose asChild>
-              <Button variant="outline" onClick={() => setEditedTask(task)}>
-                Cancel
-              </Button>
-            </DialogClose>
-            <Button
-              onClick={() =>
-                setTasks((prevTasks: Task[]) =>
-                  prevTasks.map((t) => (t.id === task.id ? editedTask : t))
-                )
-              }
-            >
-              Save Changes
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
-      <Dialog open={isDeleteDialogOpen} onOpenChange={setIsDeleteDialogOpen}>
-        <DialogTrigger asChild>
-          <Button
-            variant="outline"
-            size="icon"
-            className="h-8 w-8 text-destructive group"
-          >
-            <Trash2 className="h-4 w-4 text-destructive group-hover:text-destructive" />
-          </Button>
-        </DialogTrigger>
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle>Delete Task</DialogTitle>
-            <DialogDescription>
-              Are you sure you want to delete {task.title}? This action cannot
-              be undone.
-            </DialogDescription>
-          </DialogHeader>
-          <DialogFooter className="mt-4">
-            <Button
-              variant="outline"
-              onClick={() => setIsDeleteDialogOpen(false)}
-            >
-              Cancel
-            </Button>
-            <Button
-              variant="destructive"
-              onClick={() => {
-                setTasks((prevTasks) =>
-                  prevTasks.filter((t) => t.id !== task.id)
-                );
-                setIsDeleteDialogOpen(false);
-              }}
-            >
-              Delete
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
+      {/* <EditTaskDialog
+        // task={task}
+        // editedTask={editedTask}
+        // customCategories={customCategories}
+        // setCustomCategories={setCustomCategories}
+        // isOpen={isEditDialogOpen}
+        // onOpenChange={setIsEditDialogOpen}
+      /> */}
+
+      <DeleteTaskDialog
+        isOpen={isDeleteDialogOpen}
+        onOpenChange={setIsDeleteDialogOpen}
+        taskTitle={task.title}
+        onDelete={() => {
+          setTasks((prevTasks) => prevTasks.filter((t) => t.id !== task.id));
+          setIsDeleteDialogOpen(false);
+        }}
+      />
+
+      <Button
+        variant="outline"
+        size="icon"
+        className="h-8 w-8"
+        onClick={() => {
+          setEditedTask(task);
+          setIsEditDialogOpen(true);
+        }}
+      >
+        <Pencil className="h-4 w-4" />
+      </Button>
+      <Button
+        variant="outline"
+        size="icon"
+        className="h-8 w-8 text-destructive group"
+        onClick={() => setIsDeleteDialogOpen(true)}
+      >
+        <Trash2 className="h-4 w-4 text-destructive group-hover:text-destructive" />
+      </Button>
     </div>
   );
 };
@@ -1221,6 +950,9 @@ export default function Tasks() {
     color: categoryColors[0].value,
   });
 
+  const [isTaskSheetOpen, setIsTaskSheetOpen] = useState(false);
+  const [selectedTask, setSelectedTask] = useState<Task | null>(null);
+
   const filteredTasks = tasks.filter((task) => {
     const matchesSearch =
       task.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
@@ -1247,7 +979,7 @@ export default function Tasks() {
     localStorage.setItem("taskView", view);
   }, [view]);
 
-  const handleStatusChange = (taskId: number, newStatus: string) => {
+  const handleStatusChange = (taskId: string, newStatus: string) => {
     setTasks(
       tasks.map((task) =>
         task.id === taskId ? { ...task, status: newStatus } : task
@@ -1440,90 +1172,224 @@ export default function Tasks() {
     const completedSubtasks =
       task.subtasks?.filter((st) => st.completed).length || 0;
     const totalSubtasks = task.subtasks?.length || 0;
+    const isMobile = useIsMobile();
 
     return (
-      <Card>
-        <CardHeader className="p-3 sm:p-4">
-          <div className="flex flex-col gap-4 xl:gap-2">
-            <div className="flex items-start justify-between flex-col xl:flex-row gap-1 sm:gap-2">
-              <div className="flex-1 min-w-0">
-                <CardTitle className="text-sm sm:text-base line-clamp-1">
-                  {task.title}
-                </CardTitle>
-                <CardDescription className="my-2 xl:my-1 text-xs sm:text-sm line-clamp-2">
-                  {task.description}
-                </CardDescription>
-                {task.recurrence && (
-                  <div className="mt-1 sm:mt-2">
-                    <RecurringIndicator recurrence={task.recurrence} />
+      <>
+        <Card className="cursor-pointer">
+          <CardHeader
+            className="p-3 sm:p-4"
+            onClick={(e) => {
+              if (!(e.target as HTMLElement).closest(".task-actions")) {
+                setSelectedTask(task);
+                setIsTaskSheetOpen(true);
+              }
+            }}
+          >
+            <div className="flex flex-col gap-4 xl:gap-2">
+              <div className="flex items-start justify-between flex-col xl:flex-row gap-1 sm:gap-2">
+                <div className="flex-1 min-w-0">
+                  <CardTitle className="text-sm sm:text-base line-clamp-1">
+                    {task.title}
+                  </CardTitle>
+                  <CardDescription className="my-2 xl:my-1 text-xs sm:text-sm line-clamp-2">
+                    {task.description}
+                  </CardDescription>
+                  {task.recurrence && (
+                    <div className="mt-1 sm:mt-2">
+                      <RecurringIndicator recurrence={task.recurrence} />
+                    </div>
+                  )}
+                </div>
+                <div className="flex items-center gap-1 sm:gap-2 xl:ml-2 task-actions">
+                  <TaskStatusDropdown
+                    status={task.status}
+                    onStatusChange={(newStatus) =>
+                      handleStatusChange(task.id, newStatus)
+                    }
+                  />
+                  <TaskActions
+                    task={task}
+                    customCategories={customCategories}
+                    setCustomCategories={setCustomCategories}
+                    setTasks={setTasks}
+                  />
+                </div>
+              </div>
+              <div className="flex flex-wrap items-center gap-1 sm:gap-2">
+                <Badge
+                  variant="outline"
+                  className={cn(
+                    "capitalize",
+                    task.category.toLowerCase() === "work" &&
+                      "text-blue-500 bg-blue-500/10",
+                    task.category.toLowerCase() === "personal" &&
+                      "text-purple-500 bg-purple-500/10",
+                    task.category.toLowerCase() === "shopping" &&
+                      "text-green-500 bg-green-500/10",
+                    task.category.toLowerCase() === "health" &&
+                      "text-red-500 bg-red-500/10",
+                    task.category.toLowerCase() === "education" &&
+                      "text-yellow-500 bg-yellow-500/10",
+                    task.category.toLowerCase() === "finance" &&
+                      "text-orange-500 bg-orange-500/10"
+                  )}
+                >
+                  {task.category}
+                </Badge>
+                <Badge
+                  variant="outline"
+                  className={cn(
+                    "capitalize",
+                    priorityColor.text,
+                    priorityColor.bg
+                  )}
+                >
+                  {task.priority}
+                </Badge>
+                {task.tags.map((tag: Tag) => (
+                  <TagBadge key={tag.id} tag={tag} />
+                ))}
+              </div>
+            </div>
+          </CardHeader>
+          <CardContent className="p-3 pt-0 sm:p-4 sm:pt-0">
+            <div className="flex flex-wrap items-center gap-x-3 sm:gap-x-4 gap-y-1 sm:gap-y-2 text-xs sm:text-sm text-muted-foreground">
+              <div className="flex items-center gap-1">
+                <Calendar className="h-3 w-3 sm:h-4 sm:w-4" />
+                {format(task.dueDate, "MMM dd")}
+              </div>
+              <div className="flex items-center gap-1">
+                <ListChecks className="h-3 w-3 sm:h-4 sm:w-4" />
+                {completedSubtasks}/{totalSubtasks}
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+
+        {/* Task Details Sheet */}
+        <Sheet open={isTaskSheetOpen} onOpenChange={setIsTaskSheetOpen}>
+          <SheetContent
+            side="right"
+            className={cn(
+              "overflow-y-auto sheet border-none",
+              isMobile ? "w-full max-w-none" : "w-[500px] max-w-[500px]"
+            )}
+          >
+            <SheetHeader>
+              <SheetTitle className="text-xl font-semibold">
+                {selectedTask?.title}
+              </SheetTitle>
+            </SheetHeader>
+
+            <div className="mt-6 space-y-6">
+              {/* Description */}
+              <div className="space-y-2">
+                <h3 className="text-sm font-medium">Description</h3>
+                <p className="text-sm text-muted-foreground whitespace-pre-line">
+                  {selectedTask?.description}
+                </p>
+              </div>
+
+              {/* Status */}
+              <div className="space-y-2">
+                <h3 className="text-sm font-medium">Status</h3>
+                <div className="flex items-center gap-2">
+                  {selectedTask && (
+                    <TaskStatusDropdown
+                      status={selectedTask.status}
+                      onStatusChange={(newStatus) =>
+                        handleStatusChange(selectedTask.id, newStatus)
+                      }
+                    />
+                  )}
+                </div>
+              </div>
+
+              {/* Priority & Category */}
+              <div className="space-y-2">
+                <h3 className="text-sm font-medium">Details</h3>
+                <div className="flex flex-wrap gap-2">
+                  <Badge
+                    variant="outline"
+                    className={cn(
+                      "capitalize",
+                      selectedTask &&
+                        priorityColors[
+                          selectedTask.priority as keyof typeof priorityColors
+                        ].text,
+                      selectedTask &&
+                        priorityColors[
+                          selectedTask.priority as keyof typeof priorityColors
+                        ].bg
+                    )}
+                  >
+                    {selectedTask?.priority}
+                  </Badge>
+                  <Badge variant="outline" className="capitalize">
+                    {selectedTask?.category}
+                  </Badge>
+                </div>
+              </div>
+
+              {/* Due Date */}
+              <div className="space-y-2">
+                <h3 className="text-sm font-medium">Due Date</h3>
+                <div className="text-sm text-muted-foreground flex items-center gap-1.5">
+                  <Calendar className="h-4 w-4" />
+                  {selectedTask?.dueDate.toLocaleDateString()}
+                </div>
+              </div>
+
+              {/* Subtasks */}
+              {selectedTask?.subtasks && selectedTask.subtasks.length > 0 && (
+                <div className="space-y-2">
+                  <h3 className="text-sm font-medium">Subtasks</h3>
+                  <div className="space-y-2">
+                    {selectedTask.subtasks.map((subtask) => (
+                      <div key={subtask.id} className="flex items-center gap-2">
+                        <Checkbox
+                          checked={subtask.completed}
+                          onCheckedChange={() => {
+                            // Add your subtask toggle logic here
+                          }}
+                        />
+                        <span className="text-sm">{subtask.title}</span>
+                      </div>
+                    ))}
                   </div>
-                )}
+                </div>
+              )}
+
+              {/* Actions */}
+              <div className="flex gap-2 mt-6">
+                <Button
+                  variant="outline"
+                  className="flex-1"
+                  onClick={() => {
+                    // Add your edit logic here
+                    setIsTaskSheetOpen(false);
+                  }}
+                >
+                  <Pencil className="h-4 w-4" />
+                  Edit
+                </Button>
+                <Button
+                  variant="destructive"
+                  className="flex-1"
+                  onClick={() => {
+                    // Add your delete logic here
+                    setIsTaskSheetOpen(false);
+                  }}
+                >
+                  <Trash2 className="h-4 w-4" />
+                  Delete
+                </Button>
               </div>
-              <div className="flex items-center gap-1 sm:gap-2 xl:ml-2">
-                <TaskStatusDropdown
-                  status={task.status}
-                  onStatusChange={(newStatus) =>
-                    handleStatusChange(task.id, newStatus)
-                  }
-                />
-                <TaskActions
-                  task={task}
-                  customCategories={customCategories}
-                  setCustomCategories={setCustomCategories}
-                  setTasks={setTasks}
-                />
-              </div>
             </div>
-            <div className="flex flex-wrap items-center gap-1 sm:gap-2">
-              <Badge
-                variant="outline"
-                className={cn(
-                  "capitalize",
-                  task.category.toLowerCase() === "work" &&
-                    "text-blue-500 bg-blue-500/10",
-                  task.category.toLowerCase() === "personal" &&
-                    "text-purple-500 bg-purple-500/10",
-                  task.category.toLowerCase() === "shopping" &&
-                    "text-green-500 bg-green-500/10",
-                  task.category.toLowerCase() === "health" &&
-                    "text-red-500 bg-red-500/10",
-                  task.category.toLowerCase() === "education" &&
-                    "text-yellow-500 bg-yellow-500/10",
-                  task.category.toLowerCase() === "finance" &&
-                    "text-orange-500 bg-orange-500/10"
-                )}
-              >
-                {task.category}
-              </Badge>
-              <Badge
-                variant="outline"
-                className={cn(
-                  "capitalize",
-                  priorityColor.text,
-                  priorityColor.bg
-                )}
-              >
-                {task.priority}
-              </Badge>
-              {task.tags.map((tag: Tag) => (
-                <TagBadge key={tag.id} tag={tag} />
-              ))}
-            </div>
-          </div>
-        </CardHeader>
-        <CardContent className="p-3 pt-0 sm:p-4 sm:pt-0">
-          <div className="flex flex-wrap items-center gap-x-3 sm:gap-x-4 gap-y-1 sm:gap-y-2 text-xs sm:text-sm text-muted-foreground">
-            <div className="flex items-center gap-1">
-              <Calendar className="h-3 w-3 sm:h-4 sm:w-4" />
-              {format(task.dueDate, "MMM dd")}
-            </div>
-            <div className="flex items-center gap-1">
-              <ListChecks className="h-3 w-3 sm:h-4 sm:w-4" />
-              {completedSubtasks}/{totalSubtasks}
-            </div>
-          </div>
-        </CardContent>
-      </Card>
+          </SheetContent>
+        </Sheet>
+      </>
     );
   };
 
@@ -1641,7 +1507,7 @@ export default function Tasks() {
     while (true) {
       tasks.push({
         ...task,
-        id: Date.now() + count,
+        id: (Date.now() + count).toString(),
         dueDate: currentDate,
       });
 
@@ -1673,7 +1539,7 @@ export default function Tasks() {
   const handleCreateTask = () => {
     const newTasks = createRecurringTasks({
       ...newTask,
-      id: Date.now(),
+      id: Date.now().toString(),
       status: "not_started",
       subtasks: [],
     });
@@ -1762,7 +1628,7 @@ export default function Tasks() {
                 New Task
               </Button>
             </DialogTrigger>
-            <DialogContent className="sm:max-w-[625px] max-h-[90vh] overflow-y-auto">
+            <DialogContent className="sm:max-w-[625px] max-h-[80vh] sm:max-h-[90vh] overflow-y-auto">
               <DialogHeader>
                 <DialogTitle>Create New Task</DialogTitle>
               </DialogHeader>
@@ -2081,7 +1947,7 @@ export default function Tasks() {
                 <span>New Task</span>
               </Button>
             </DialogTrigger>
-            <DialogContent className="sm:max-w-[625px] max-h-[90vh] overflow-y-auto">
+            <DialogContent className="sm:max-w-[625px] max-h-[80vh] sm:max-h-[90vh] overflow-y-auto">
               <DialogHeader>
                 <DialogTitle>Create New Task</DialogTitle>
               </DialogHeader>
