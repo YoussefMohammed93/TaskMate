@@ -772,15 +772,15 @@ export default function Calendar() {
                   "text-muted-foreground rounded-md w-9 font-normal text-[0.8rem] flex-1",
                 row: "flex w-full mt-2",
                 cell: "text-center text-sm relative [&:has([aria-selected])]:bg-accent first:[&:has([aria-selected])]:rounded-l-md last:[&:has([aria-selected])]:rounded-r-md focus-within:relative focus-within:z-20 flex-1 p-0 h-9 aria-selected:opacity-100",
-                day: "h-9 w-full p-0 font-normal aria-selected:opacity-100",
+                day: "h-9 w-full p-0 font-normal aria-selected:opacity-100 rounded-lg",
                 day_selected:
-                  "bg-primary text-primary-foreground hover:bg-primary hover:text-primary-foreground focus:bg-primary focus:text-primary-foreground",
+                  "bg-primary text-primary-foreground hover:bg-primary hover:text-primary-foreground rounded-lg focus:bg-primary focus:text-primary-foreground",
                 day_today: "bg-accent text-accent-foreground rounded-lg",
-                day_outside: "text-muted-foreground opacity-50",
-                day_disabled: "text-muted-foreground opacity-50",
+                day_outside: "text-muted-foreground opacity-50 rounded-lg",
+                day_disabled: "text-muted-foreground opacity-50 rounded-lg",
                 day_range_middle:
-                  "aria-selected:bg-accent aria-selected:text-accent-foreground",
-                day_hidden: "invisible",
+                  "aria-selected:bg-accent aria-selected:text-accent-foreground rounded-lg",
+                day_hidden: "invisible rounded-lg",
               }}
             />
           </CardContent>

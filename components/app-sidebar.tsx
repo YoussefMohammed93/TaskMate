@@ -40,14 +40,14 @@ const mainItems = [
     icon: ListTodo,
   },
   {
-    title: "Pomodoro",
-    url: "/pomodoro",
-    icon: Timer,
-  },
-  {
     title: "Notes",
     url: "/notes",
     icon: StickyNote,
+  },
+  {
+    title: "Pomodoro",
+    url: "/pomodoro",
+    icon: Timer,
   },
   {
     title: "Calendar",

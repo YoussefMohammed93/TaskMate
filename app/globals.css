@@ -82,3 +82,10 @@
     @apply bg-background text-foreground;
   }
 }
+
+@media (min-width: 768px) {
+  .sheet {
+    width: 600px !important;
+    max-width: 600px !important;
+  }
+}

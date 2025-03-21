@@ -15,6 +15,7 @@ import {
 import Link from "next/link";
 import { cn } from "@/lib/utils";
 import { useTheme } from "next-themes";
+import { useAuth } from "@clerk/nextjs";
 import { useState, useEffect } from "react";
 import { Skeleton } from "@/components/ui/skeleton";
 
@@ -59,6 +60,8 @@ const steps = [
 
 export function HowItWorks() {
   const { theme, setTheme } = useTheme();
+
+  const isAuthenticated = useAuth().isSignedIn;
 
   const [mounted, setMounted] = useState(false);
   const [activeStep, setActiveStep] = useState(0);
@@ -405,7 +408,7 @@ export function HowItWorks() {
                             "bg-primary text-primary-foreground hover:bg-primary/90"
                           )}
                         >
-                          Get Started
+                          {isAuthenticated ? "Go to Dashboard" : "Get Started"}
                           <ArrowRight className="ml-2 size-4" />
                         </Link>
                       )}

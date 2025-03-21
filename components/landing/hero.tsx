@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import { cn } from "@/lib/utils";
+import { useAuth } from "@clerk/nextjs";
 import { Button } from "@/components/ui/button";
 import { ArrowRight, Crown, Infinity, Trophy, Sparkles } from "lucide-react";
 
@@ -40,6 +41,8 @@ const IconComponent = ({ icon, color }: { icon: string; color: string }) => {
 };
 
 export function Hero() {
+  const isAuthenticated = useAuth().isSignedIn;
+
   return (
     <section
       aria-label="Hero Section"
@@ -85,7 +88,7 @@ export function Hero() {
                 size="lg"
                 className="w-full text-base font-medium shadow-lg hover:shadow-xl transition-all"
               >
-                Get Started Free
+                {isAuthenticated ? "Go to Dashboard" : "Get Started"}
                 <ArrowRight aria-hidden="true" className="size-4 ml-1" />
               </Button>
             </Link>

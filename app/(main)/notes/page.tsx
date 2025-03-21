@@ -38,18 +38,24 @@ import {
 } from "@/components/ui/dialog";
 import { cn } from "@/lib/utils";
 import {
+  Sheet,
+  SheetContent,
+  SheetHeader,
+  SheetTitle,
+} from "@/components/ui/sheet";
+import { SortOption } from "./types";
+import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { SortOption } from "./types";
 import { Card } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Search as SearchIcon } from "lucide-react";
+import { useIsMobile } from "@/hooks/use-mobile";
 import { useState, useEffect, useMemo } from "react";
 import { NoteEditor } from "@/components/notes/editor";
 
@@ -347,7 +353,7 @@ export default function Notes() {
                   New Note
                 </Button>
               </DialogTrigger>
-              <DialogContent className="sm:max-w-[625px]">
+              <DialogContent className="sm:max-w-[625px] max-h-[90vh] overflow-y-auto">
                 <DialogHeader>
                   <DialogTitle>Create New Note</DialogTitle>
                 </DialogHeader>
@@ -677,68 +683,184 @@ interface NoteCardProps {
 function NoteCard({ note, onPin, onDelete }: NoteCardProps) {
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
   const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
+  const [isDetailsSheetOpen, setIsDetailsSheetOpen] = useState(false);
   const [editingNote, setEditingNote] = useState<Note | null>(null);
+  const isMobile = useIsMobile();
 
   return (
-    <Card className="relative p-4">
-      <div className="flex items-start justify-between">
-        <h3 className="font-semibold">{note.title}</h3>
-        <div className="flex items-center gap-2">
-          {note.isPinned && <Pin className="h-4 w-4 text-muted-foreground" />}
-          <DropdownMenu>
-            <DropdownMenuTrigger asChild>
-              <Button variant="ghost" size="icon">
-                <MoreVertical className="h-4 w-4" />
-              </Button>
-            </DropdownMenuTrigger>
-            <DropdownMenuContent align="end">
-              <DropdownMenuItem onClick={onPin}>
-                <Pin className="h-4 w-4" />
-                {note.isPinned ? "Unpin" : "Pin"} note
-              </DropdownMenuItem>
-              <DropdownMenuItem
+    <>
+      <Card
+        className="relative p-4 cursor-pointer hover:bg-muted/50 transition-colors"
+        onClick={(e) => {
+          if (!(e.target as HTMLElement).closest(".note-actions")) {
+            setIsDetailsSheetOpen(true);
+          }
+        }}
+      >
+        <div className="flex items-start justify-between">
+          <h3 className="font-semibold">{note.title}</h3>
+          <div className="flex items-center gap-2 note-actions">
+            {note.isPinned && <Pin className="h-4 w-4 text-muted-foreground" />}
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  onClick={(e) => e.stopPropagation()}
+                >
+                  <MoreVertical className="h-4 w-4" />
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end">
+                <DropdownMenuItem
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    onPin();
+                  }}
+                >
+                  <Pin className="h-4 w-4" />
+                  {note.isPinned ? "Unpin" : "Pin"} note
+                </DropdownMenuItem>
+                <DropdownMenuItem
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    setEditingNote(note);
+                    setIsEditDialogOpen(true);
+                  }}
+                >
+                  <Pencil className="h-4 w-4" />
+                  Edit note
+                </DropdownMenuItem>
+                <DropdownMenuItem
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    setIsDeleteDialogOpen(true);
+                  }}
+                >
+                  <Trash2 className="h-4 w-4" />
+                  Delete note
+                </DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
+          </div>
+        </div>
+        <p className="mt-2 text-sm text-muted-foreground whitespace-pre-line line-clamp-3">
+          {note.content}
+        </p>
+        <div className="mt-4 flex items-center gap-2 flex-wrap">
+          {note.tags.map((tag) => {
+            const colors = getTagColors(tag);
+            return (
+              <Badge
+                key={tag}
+                variant="outline"
+                className={cn("transition-colors", colors.bg, colors.text)}
+              >
+                <div className="flex items-center gap-1.5">
+                  <div className={cn("w-1.5 h-1.5 rounded-full", colors.dot)} />
+                  {tag.charAt(0).toUpperCase() + tag.slice(1)}
+                </div>
+              </Badge>
+            );
+          })}
+        </div>
+        <div className="mt-4 text-xs text-muted-foreground flex items-center gap-1.5">
+          <Calendar className="h-3 w-3" />
+          {note.createdAt.toLocaleDateString()}
+        </div>
+      </Card>
+
+      {/* Note Details Sheet */}
+      <Sheet open={isDetailsSheetOpen} onOpenChange={setIsDetailsSheetOpen}>
+        <SheetContent
+          side="right"
+          className={cn(
+            "overflow-y-auto sheet",
+            isMobile ? "w-full max-w-none" : "w-[500px] max-w-[500px]"
+          )}
+        >
+          <SheetHeader>
+            <SheetTitle className="text-xl font-semibold">
+              {note.title}
+            </SheetTitle>
+          </SheetHeader>
+
+          <div className="mt-6 space-y-6">
+            {/* Content */}
+            <div className="space-y-2">
+              <p className="text-sm whitespace-pre-line">{note.content}</p>
+            </div>
+
+            {/* Tags */}
+            <div className="space-y-2">
+              <h3 className="text-sm font-medium">Tags</h3>
+              <div className="flex flex-wrap gap-2">
+                {note.tags.map((tag) => {
+                  const colors = getTagColors(tag);
+                  return (
+                    <Badge
+                      key={tag}
+                      variant="outline"
+                      className={cn(
+                        "transition-colors",
+                        colors.bg,
+                        colors.text
+                      )}
+                    >
+                      <div className="flex items-center gap-1.5">
+                        <div
+                          className={cn("w-1.5 h-1.5 rounded-full", colors.dot)}
+                        />
+                        {tag.charAt(0).toUpperCase() + tag.slice(1)}
+                      </div>
+                    </Badge>
+                  );
+                })}
+              </div>
+            </div>
+
+            {/* Created Date */}
+            <div className="space-y-2">
+              <h3 className="text-sm font-medium">Created</h3>
+              <div className="text-sm text-muted-foreground flex items-center gap-1.5">
+                <Calendar className="h-3 w-3" />
+                {note.createdAt.toLocaleDateString()}
+              </div>
+            </div>
+
+            {/* Actions */}
+            <div className="flex gap-2 mt-6">
+              <Button
+                variant="outline"
+                className="flex-1"
                 onClick={() => {
                   setEditingNote(note);
                   setIsEditDialogOpen(true);
+                  setIsDetailsSheetOpen(false);
                 }}
               >
                 <Pencil className="h-4 w-4" />
-                Edit note
-              </DropdownMenuItem>
-              <DropdownMenuItem onClick={() => setIsDeleteDialogOpen(true)}>
+                Edit
+              </Button>
+              <Button
+                variant="destructive"
+                className="flex-1"
+                onClick={() => {
+                  setIsDeleteDialogOpen(true);
+                  setIsDetailsSheetOpen(false);
+                }}
+              >
                 <Trash2 className="h-4 w-4" />
-                Delete note
-              </DropdownMenuItem>
-            </DropdownMenuContent>
-          </DropdownMenu>
-        </div>
-      </div>
-      <p className="mt-2 text-sm text-muted-foreground whitespace-pre-line line-clamp-3">
-        {note.content}
-      </p>
-      <div className="mt-4 flex items-center gap-2 flex-wrap">
-        {note.tags.map((tag) => {
-          const colors = getTagColors(tag);
-          return (
-            <Badge
-              key={tag}
-              variant="outline"
-              className={cn("transition-colors", colors.bg, colors.text)}
-            >
-              <div className="flex items-center gap-1.5">
-                <div className={cn("w-1.5 h-1.5 rounded-full", colors.dot)} />
-                {tag.charAt(0).toUpperCase() + tag.slice(1)}
-              </div>
-            </Badge>
-          );
-        })}
-      </div>
-      <div className="mt-4 text-xs text-muted-foreground flex items-center gap-1.5">
-        <Calendar className="h-3 w-3" />
-        {note.createdAt.toLocaleDateString()}
-      </div>
+                Delete
+              </Button>
+            </div>
+          </div>
+        </SheetContent>
+      </Sheet>
+
+      {/* Existing Edit Dialog */}
       <Dialog open={isEditDialogOpen} onOpenChange={setIsEditDialogOpen}>
-        <DialogContent className="sm:max-w-[625px]">
+        <DialogContent className="sm:max-w-[625px] max-h-[90vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle>Edit Note</DialogTitle>
           </DialogHeader>
@@ -886,7 +1008,7 @@ function NoteCard({ note, onPin, onDelete }: NoteCardProps) {
           </DialogFooter>
         </DialogContent>
       </Dialog>
-    </Card>
+    </>
   );
 }
 

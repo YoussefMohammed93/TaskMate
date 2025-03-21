@@ -21,6 +21,13 @@ import {
   Table as TableIcon,
 } from "lucide-react";
 import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
+import {
   Dialog,
   DialogClose,
   DialogContent,
@@ -38,13 +45,6 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-} from "@/components/ui/card";
 import {
   Table,
   TableBody,
@@ -1714,11 +1714,7 @@ export default function Tasks() {
         <SelectContent>
           <SelectItem value="all">All Priorities</SelectItem>
           {priorities.map((priority) => (
-            <SelectItem
-              key={priority.value}
-              value={priority.value}
-              className={priority.color}
-            >
+            <SelectItem key={priority.value} value={priority.value}>
               {priority.label}
             </SelectItem>
           ))}
