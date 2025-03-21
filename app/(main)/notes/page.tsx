@@ -43,6 +43,7 @@ import {
   SheetHeader,
   SheetTitle,
 } from "@/components/ui/sheet";
+import dynamic from "next/dynamic";
 import { SortOption } from "./types";
 import {
   DropdownMenu,
@@ -56,8 +57,8 @@ import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { useIsMobile } from "@/hooks/use-mobile";
+import { Skeleton } from "@/components/ui/skeleton";
 import { useState, useEffect, useMemo } from "react";
-import { NoteEditor } from "@/components/notes/editor";
 
 interface Note {
   id: string;
@@ -239,6 +240,19 @@ export default function Notes() {
     }
   }, [view, mounted]);
 
+  const Editor = useMemo(
+    () =>
+      dynamic(() => import("@/components/notes/editor"), {
+        ssr: false,
+        loading: () => (
+          <div className="w-full animate-pulse">
+            <Skeleton className="h-40 w-full" />
+          </div>
+        ),
+      }),
+    []
+  );
+
   const handleCreateNote = (note: {
     title: string;
     content: string;
@@ -247,16 +261,15 @@ export default function Notes() {
     const newNote = {
       id: Math.random().toString(36).substr(2, 9),
       title: note.title,
-      content: note.content,
+      content: note.content || JSON.stringify([]), // Default to empty array if no content
       tags: note.tags,
       createdAt: new Date(),
       isPinned: false,
+      color: "blue-500",
+      folderId: null,
     };
 
-    setNotes((prev) => [
-      ...prev,
-      { ...newNote, color: "blue-500", folderId: null },
-    ]);
+    setNotes((prev) => [...prev, newNote]);
     setIsNewNoteDialogOpen(false);
   };
 
@@ -371,11 +384,11 @@ export default function Notes() {
                   </div>
                   <div className="grid gap-2">
                     <Label>Content</Label>
-                    <NoteEditor
-                    // content={newNote.content}
-                    // onChange={(value) =>
-                    //   setNewNote({ ...newNote, content: value })
-                    // }
+                    <Editor
+                      initialContent={newNote.content}
+                      onChange={(content: string) =>
+                        setNewNote({ ...newNote, content })
+                      }
                     />
                   </div>
                   <div className="grid gap-2">
@@ -687,6 +700,19 @@ function NoteCard({ note, onPin, onDelete }: NoteCardProps) {
   const [editingNote, setEditingNote] = useState<Note | null>(null);
   const isMobile = useIsMobile();
 
+  const Editor = useMemo(
+    () =>
+      dynamic(() => import("@/components/notes/editor"), {
+        ssr: false,
+        loading: () => (
+          <div className="w-full animate-pulse">
+            <Skeleton className="h-40 w-full" />
+          </div>
+        ),
+      }),
+    []
+  );
+
   return (
     <>
       <Card
@@ -884,18 +910,18 @@ function NoteCard({ note, onPin, onDelete }: NoteCardProps) {
             </div>
             <div className="grid gap-2">
               <Label>Content</Label>
-              <NoteEditor
-              // content={editingNote?.content || ""}
-              // onChange={(value) =>
-              //   setEditingNote(
-              //     editingNote
-              //       ? {
-              //           ...editingNote,
-              //           content: value,
-              //         }
-              //       : null
-              //   )
-              // }
+              <Editor
+                initialContent={editingNote?.content || ""}
+                onChange={(content: string) =>
+                  setEditingNote(
+                    editingNote
+                      ? {
+                          ...editingNote,
+                          content,
+                        }
+                      : null
+                  )
+                }
               />
             </div>
             <div className="grid gap-2">

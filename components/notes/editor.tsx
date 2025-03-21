@@ -1,99 +1,45 @@
-"use client";
+import "@blocknote/mantine/style.css";
+import "@blocknote/core/fonts/inter.css";
 
-import { useState } from "react";
-import { cn } from "@/lib/utils";
-const lowlight = createLowlight(common);
-import Link from "@tiptap/extension-link";
-import Image from "@tiptap/extension-image";
-import StarterKit from "@tiptap/starter-kit";
-import { Button } from "@/components/ui/button";
-import { common, createLowlight } from "lowlight";
-import { Editor, EditorContent } from "@tiptap/react";
-import { Bold, Italic, List, Heading, Code } from "lucide-react";
-import CodeBlockLowlight from "@tiptap/extension-code-block-lowlight";
+import { useTheme } from "next-themes";
+import { useEdgeStore } from "@/lib/edgestore";
+import { BlockNoteView } from "@blocknote/mantine";
+import { useCreateBlockNote } from "@blocknote/react";
 
-export function NoteEditor() {
-  const [editor] = useState(
-    () =>
-      new Editor({
-        extensions: [
-          StarterKit,
-          CodeBlockLowlight.configure({
-            lowlight,
-          }),
-          Image,
-          Link,
-        ],
-        content: "",
-        editorProps: {
-          attributes: {
-            class:
-              "prose prose-sm sm:prose lg:prose-lg xl:prose-2xl mx-auto focus:outline-none",
-          },
-        },
-      })
-  );
+interface EditorProps {
+  editable?: boolean;
+  initialContent?: string;
+  onChange: (content: string) => void;
+}
 
-  const toggleFormat = (
-    type:
-      | "toggleBold"
-      | "toggleItalic"
-      | "toggleBulletList"
-      | "toggleHeading"
-      | "toggleCodeBlock"
-  ) => {
-    if (type === "toggleHeading") {
-      editor?.chain().focus().toggleHeading({ level: 2 }).run();
-    } else {
-      editor?.chain().focus()[type]().run();
-    }
+const Editor = ({ editable = true, onChange, initialContent }: EditorProps) => {
+  const { resolvedTheme } = useTheme();
+  const { edgestore } = useEdgeStore();
+
+  const handleUpload = async (file: File) => {
+    const response = await edgestore.publicFiles.upload({
+      file,
+    });
+
+    return response.url;
   };
 
+  const editor = useCreateBlockNote({
+    initialContent: initialContent ? JSON.parse(initialContent) : undefined,
+    uploadFile: handleUpload,
+  });
+
   return (
-    <div className="flex flex-col gap-4 border rounded-lg p-4">
-      <div className="flex items-center gap-2 border-b pb-4">
-        <Button
-          variant="ghost"
-          size="sm"
-          onClick={() => toggleFormat("toggleBold")}
-          className={cn(editor?.isActive("bold") && "bg-muted")}
-        >
-          <Bold className="h-4 w-4" />
-        </Button>
-        <Button
-          variant="ghost"
-          size="sm"
-          onClick={() => toggleFormat("toggleItalic")}
-          className={cn(editor?.isActive("italic") && "bg-muted")}
-        >
-          <Italic className="h-4 w-4" />
-        </Button>
-        <Button
-          variant="ghost"
-          size="sm"
-          onClick={() => toggleFormat("toggleBulletList")}
-          className={cn(editor?.isActive("bulletList") && "bg-muted")}
-        >
-          <List className="h-4 w-4" />
-        </Button>
-        <Button
-          variant="ghost"
-          size="sm"
-          onClick={() => toggleFormat("toggleHeading")}
-          className={cn(editor?.isActive("heading") && "bg-muted")}
-        >
-          <Heading className="h-4 w-4" />
-        </Button>
-        <Button
-          variant="ghost"
-          size="sm"
-          onClick={() => toggleFormat("toggleCodeBlock")}
-          className={cn(editor?.isActive("codeBlock") && "bg-muted")}
-        >
-          <Code className="h-4 w-4" />
-        </Button>
-      </div>
-      <EditorContent editor={editor} />
-    </div>
+    <BlockNoteView
+      editor={editor}
+      editable={editable}
+      onChange={() => {
+        const content = JSON.stringify(editor.document, null, 2);
+        onChange(content);
+      }}
+      theme={resolvedTheme === "dark" ? "dark" : "light"}
+    />
   );
-}
+};
+
+export default Editor;

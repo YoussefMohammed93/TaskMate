@@ -3,6 +3,7 @@ import type { Metadata } from "next";
 import localFont from "next/font/local";
 import { ClerkProvider } from "@clerk/nextjs";
 import { Toaster } from "@/components/ui/sonner";
+import { EdgeStoreProvider } from "@/lib/edgestore";
 import { ThemeProvider } from "@/components/theme-provider";
 import { ConvexClientProvider } from "./convex-client-provider";
 
@@ -56,7 +57,7 @@ export default function RootLayout({
             disableTransitionOnChange
           >
             <ConvexClientProvider>
-              {children}
+              <EdgeStoreProvider>{children}</EdgeStoreProvider>
               <Toaster position="bottom-right" richColors />
             </ConvexClientProvider>
           </ThemeProvider>
