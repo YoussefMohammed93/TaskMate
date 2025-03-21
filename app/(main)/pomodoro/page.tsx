@@ -207,13 +207,11 @@ export default function Pomodoro() {
   }, [isRunning, timeLeft, mode, settings]);
 
   return (
-    <div className="container mx-auto px-4 pb-2 space-y-6">
+    <div className="container mx-auto pb-2 space-y-6">
       <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 mb-8">
         <div>
-          <h1 className="text-2xl sm:text-3xl font-light tracking-tight">
-            Pomodoro
-          </h1>
-          <p className="text-muted-foreground mt-1 text-sm sm:text-xl font-light">
+          <h1 className="text-3xl font-light tracking-tight">Pomodoro</h1>
+          <p className="text-muted-foreground mt-1 text-xl font-light">
             Stay focused and track your productivity
           </p>
         </div>

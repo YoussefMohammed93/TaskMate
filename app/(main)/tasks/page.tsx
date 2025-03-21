@@ -142,7 +142,6 @@ const recurrenceOptions = [
   { label: "Daily", value: "daily" },
   { label: "Weekly", value: "weekly" },
   { label: "Monthly", value: "monthly" },
-  { label: "Custom", value: "custom" },
 ] as const;
 
 const weekDays = [
@@ -469,6 +468,12 @@ const TagBadge = ({ tag, onRemove }: { tag: Tag; onRemove?: () => void }) => {
   );
 };
 
+interface CustomTag {
+  id: string;
+  name: string;
+  color: string;
+}
+
 const TagSelect = ({
   selectedTags,
   onTagSelect,
@@ -476,19 +481,118 @@ const TagSelect = ({
   selectedTags: Tag[];
   onTagSelect: (tag: Tag) => void;
 }) => {
-  const colorMap = {
-    red: "bg-red-500",
-    blue: "bg-blue-500",
-    purple: "bg-purple-500",
-    orange: "bg-orange-500",
-    green: "bg-green-500",
-  };
+  const [isAddingCustomTag, setIsAddingCustomTag] = useState(false);
+  const [newCustomTag, setNewCustomTag] = useState<CustomTag>({
+    id: "",
+    name: "",
+    color: "red",
+  });
+
+  const tagColors = [
+    { value: "red", label: "Red" },
+    { value: "blue", label: "Blue" },
+    { value: "green", label: "Green" },
+    { value: "purple", label: "Purple" },
+    { value: "orange", label: "Orange" },
+    { value: "yellow", label: "Yellow" },
+  ];
+
+  if (isAddingCustomTag) {
+    return (
+      <div className="space-y-4">
+        <div className="flex flex-col sm:flex-row gap-2">
+          <div className="flex-1 space-y-2">
+            <Input
+              placeholder="Enter tag name"
+              value={newCustomTag.name}
+              onChange={(e) =>
+                setNewCustomTag({
+                  ...newCustomTag,
+                  name: e.target.value,
+                })
+              }
+            />
+          </div>
+          <Select
+            value={newCustomTag.color}
+            onValueChange={(value) =>
+              setNewCustomTag({
+                ...newCustomTag,
+                color: value,
+              })
+            }
+          >
+            <SelectTrigger className="w-full sm:w-[180px]">
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              {tagColors.map((color) => (
+                <SelectItem key={color.value} value={color.value}>
+                  <div className="flex items-center gap-2">
+                    <div
+                      className={cn(
+                        "w-3 h-3 rounded-full",
+                        `bg-${color.value}-500`
+                      )}
+                    />
+                    {color.label}
+                  </div>
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </div>
+        <div className="flex flex-col sm:flex-row gap-2">
+          <Button
+            variant="outline"
+            className="w-full sm:w-auto order-2 sm:order-1"
+            onClick={() => {
+              setIsAddingCustomTag(false);
+              setNewCustomTag({
+                id: "",
+                name: "",
+                color: "red",
+              });
+            }}
+          >
+            Cancel
+          </Button>
+          <Button
+            className="w-full sm:w-auto order-1 sm:order-2"
+            disabled={newCustomTag.name.length < 2}
+            onClick={() => {
+              if (newCustomTag.name) {
+                const newTag: Tag = {
+                  id: crypto.randomUUID(),
+                  name: newCustomTag.name.toLowerCase(),
+                  color: newCustomTag.color,
+                };
+                onTagSelect(newTag);
+                setIsAddingCustomTag(false);
+                setNewCustomTag({
+                  id: "",
+                  name: "",
+                  color: "red",
+                });
+              }
+            }}
+          >
+            Add Tag
+          </Button>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <Select
       onValueChange={(value) => {
-        const selectedTag = defaultTags.find((tag) => tag.id === value);
-        if (selectedTag) onTagSelect(selectedTag);
+        if (value === "custom") {
+          setIsAddingCustomTag(true);
+        } else {
+          const selectedTag = defaultTags.find((tag) => tag.id === value);
+          if (selectedTag) onTagSelect(selectedTag);
+        }
       }}
     >
       <SelectTrigger>
@@ -501,15 +605,14 @@ const TagSelect = ({
             <SelectItem key={tag.id} value={tag.id}>
               <div className="flex items-center gap-2">
                 <div
-                  className={cn(
-                    "w-2 h-2 rounded-full",
-                    colorMap[tag.color as keyof typeof colorMap]
-                  )}
+                  className={cn("w-3 h-3 rounded-full", `bg-${tag.color}-500`)}
                 />
-                {tag.name.charAt(0).toUpperCase() + tag.name.slice(1)}
+                {tag.name}
               </div>
             </SelectItem>
           ))}
+        <SelectSeparator />
+        <SelectItem value="custom">+ Add Custom Tag</SelectItem>
       </SelectContent>
     </Select>
   );
@@ -793,7 +896,7 @@ const TaskActions = ({
                 }
               />
             </div>
-            <div className="grid grid-cols-2 items-start gap-4">
+            <div className="grid grid-cols-1 items-start gap-4">
               <div className="grid gap-2">
                 <Label>Priority</Label>
                 <Select
@@ -882,16 +985,20 @@ const TaskActions = ({
                           })
                         }
                       >
-                        <SelectTrigger className="w-[180px]">
+                        <SelectTrigger className="w-full sm:w-[180px]">
                           <SelectValue placeholder="Select color" />
                         </SelectTrigger>
                         <SelectContent>
                           {categoryColors.map((color) => (
-                            <SelectItem key={color.value} value={color.value}>
+                            <SelectItem
+                              key={color.value}
+                              value={color.value}
+                              className="bg-transparent"
+                            >
                               <div className="flex items-center gap-2">
                                 <div
                                   className={cn(
-                                    "w-4 h-4 rounded-full",
+                                    "w-3 h-3 rounded-full",
                                     color.value
                                   )}
                                 />
@@ -1191,7 +1298,7 @@ export default function Tasks() {
   const TableView = () => (
     <>
       {filteredTasks.length > 0 ? (
-        <div className="rounded-md border overflow-auto">
+        <div className="rounded-md border overflow-auto md:mt-4">
           <Table>
             <TableHeader className="dark:bg-secondary">
               <TableRow>
@@ -1491,7 +1598,7 @@ export default function Tasks() {
   const CardsView = () => (
     <>
       {filteredTasks.length > 0 ? (
-        <div className="grid grid-cols-1 xl:grid-cols-2 gap-4">
+        <div className="grid grid-cols-1 xl:grid-cols-2 gap-4 md:pt-2">
           {filteredTasks.map((task) => (
             <TaskCard key={task.id} task={task}>
               <Badge
@@ -1631,7 +1738,15 @@ export default function Tasks() {
   );
 
   return (
-    <div className="h-full">
+    <div className="pb-2 space-y-4 md:space-y-2">
+      <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+        <div>
+          <h1 className="text-3xl font-light tracking-tight">Tasks</h1>
+          <p className="text-muted-foreground mt-1 text-xl font-light">
+            Organize and track your tasks efficiently
+          </p>
+        </div>
+      </div>
       <div className="flex flex-col gap-4">
         <div className="block lg:hidden w-full relative">
           <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
@@ -1651,7 +1766,7 @@ export default function Tasks() {
                 New Task
               </Button>
             </DialogTrigger>
-            <DialogContent className="sm:max-w-[625px] max-h-[500px] overflow-y-auto">
+            <DialogContent className="sm:max-w-[625px] max-h-[90vh] overflow-y-auto">
               <DialogHeader>
                 <DialogTitle>Create New Task</DialogTitle>
               </DialogHeader>
@@ -1716,7 +1831,6 @@ export default function Tasks() {
                             <SelectItem
                               key={category.name}
                               value={category.name.toLowerCase()}
-                              className={category.color}
                             >
                               {category.name}
                             </SelectItem>
@@ -1760,9 +1874,17 @@ export default function Tasks() {
                                 <SelectItem
                                   key={color.value}
                                   value={color.value}
-                                  className={color.value}
+                                  className="bg-transparent"
                                 >
-                                  {color.label}
+                                  <div className="flex items-center gap-2">
+                                    <div
+                                      className={cn(
+                                        "w-2 h-2 rounded-full",
+                                        color.value
+                                      )}
+                                    />
+                                    {color.label}
+                                  </div>
                                 </SelectItem>
                               ))}
                             </SelectContent>
@@ -1963,7 +2085,7 @@ export default function Tasks() {
                 <span>New Task</span>
               </Button>
             </DialogTrigger>
-            <DialogContent className="sm:max-w-[625px] max-h-[500px] overflow-y-auto">
+            <DialogContent className="sm:max-w-[625px] max-h-[90vh] overflow-y-auto">
               <DialogHeader>
                 <DialogTitle>Create New Task</DialogTitle>
               </DialogHeader>
@@ -1979,7 +2101,7 @@ export default function Tasks() {
                     placeholder="Enter task description"
                   />
                 </div>
-                <div className="grid grid-cols-2 items-start gap-4">
+                <div className="grid grid-cols-1 items-start gap-4">
                   <div className="grid gap-2">
                     <Label>Priority</Label>
                     <Select>
@@ -2064,7 +2186,7 @@ export default function Tasks() {
                               })
                             }
                           >
-                            <SelectTrigger className="w-full sm:w-[100px]">
+                            <SelectTrigger className="w-full sm:w-[180px]">
                               <SelectValue />
                             </SelectTrigger>
                             <SelectContent>
@@ -2072,9 +2194,17 @@ export default function Tasks() {
                                 <SelectItem
                                   key={color.value}
                                   value={color.value}
-                                  className={color.value}
+                                  className="bg-transparent"
                                 >
-                                  {color.label}
+                                  <div className="flex items-center gap-2">
+                                    <div
+                                      className={cn(
+                                        "w-3 h-3 rounded-full",
+                                        color.value
+                                      )}
+                                    />
+                                    {color.label}
+                                  </div>
                                 </SelectItem>
                               ))}
                             </SelectContent>

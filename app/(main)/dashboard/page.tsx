@@ -194,12 +194,13 @@ export default function Dashboard() {
   };
 
   return (
-    <div>
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-5">
-        <div>
-          <h1 className="text-2xl sm:text-3xl font-light">
-            Welcome back, Youssef!
-          </h1>
+    <div className="pb-2 space-y-4 md:space-y-2">
+      <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+        <div className="mb-1 sm:mb-2 lg:mb-3">
+          <h1 className="text-3xl font-light tracking-tight">Dashboard</h1>
+          <p className="text-muted-foreground mt-1 text-xl font-light">
+            Track your productivity and daily progress
+          </p>
         </div>
         <div className="flex items-center gap-2 sm:gap-3">
           <Button variant="outline" size="icon" className="relative">
@@ -262,7 +263,7 @@ export default function Dashboard() {
           </Card>
         ))}
       </div>
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 sm:gap-5 mt-4 sm:mt-5">
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 sm:gap-5 mt-4 sm:mt-5 pt-1 sm:pt-2 lg:pt-3">
         <Card className="lg:col-span-2 overflow-hidden">
           <CardHeader className="p-3 sm:p-4">
             <div className="flex items-center justify-between">

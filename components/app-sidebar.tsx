@@ -45,7 +45,7 @@ const mainItems = [
     icon: Timer,
   },
   {
-    title: "Sticky Notes",
+    title: "Notes",
     url: "/notes",
     icon: StickyNote,
   },

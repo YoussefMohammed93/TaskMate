@@ -13,7 +13,7 @@ export default function Layout({ children }: { children: React.ReactNode }) {
             <SidebarTrigger />
           </div>
           <div className="flex-1 relative">
-            <div className="h-full p-5">{children}</div>
+            <div className="h-full p-5 pt-4">{children}</div>
           </div>
         </main>
       </div>
