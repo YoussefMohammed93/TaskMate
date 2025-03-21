@@ -328,7 +328,7 @@ export default function Notes() {
 
   return (
     <div className="h-full flex">
-      <div className="flex-1 flex flex-col gap-4 pb-4 px-4">
+      <div className="flex-1 flex flex-col gap-4 pb-4">
         <div className="flex flex-col gap-4">
           <div className="flex sm:items-center justify-between flex-col sm:flex-row gap-5">
             <div>
@@ -342,7 +342,7 @@ export default function Notes() {
               onOpenChange={setIsNewNoteDialogOpen}
             >
               <DialogTrigger asChild>
-                <Button>
+                <Button variant="outline" className="dark:bg-muted/50">
                   <Plus className="h-4 w-4" />
                   New Note
                 </Button>

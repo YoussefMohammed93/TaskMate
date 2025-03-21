@@ -207,7 +207,7 @@ export default function Pomodoro() {
   }, [isRunning, timeLeft, mode, settings]);
 
   return (
-    <div className="container mx-auto pb-2 space-y-6">
+    <div className="pb-2 space-y-6">
       <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 mb-8">
         <div>
           <h1 className="text-3xl font-light tracking-tight">Pomodoro</h1>
