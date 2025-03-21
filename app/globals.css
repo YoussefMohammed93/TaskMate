@@ -89,3 +89,74 @@
     max-width: 600px !important;
   }
 }
+
+.dark .cl-internal-13lvar6 {
+  background: #26262680 !important;
+}
+
+.dark .cl-internal-pp7u0o,
+.dark .cl-navbarButtonText,
+.dark .cl-navbarButtonIcon,
+.dark .cl-headerTitle,
+.dark .cl-profileSectionTitleText,
+.dark .cl-userPreviewMainIdentifier,
+.dark .cl-internal-1v9xsvw,
+.dark .cl-internal-1pz8pdy,
+.dark .cl-menuButton,
+.dark .cl-menuButtonEllipsis,
+.dark .cl-internal-kp2e6f,
+.dark .cl-internal-168uxhv,
+.dark .cl-badge,
+.dark .cl-navbarMobileMenuButton,
+.dark .cl-internal-23zfou {
+  color: #fff !important;
+}
+
+.dark .cl-badge {
+  border: 1px solid #ffffff69 !important;
+}
+
+.dark
+  .cl-navbarButton.cl-button.cl-navbarButton__account.cl-button__account.cl-active,
+.dark
+  .cl-navbarButton.cl-button.cl-navbarButton__security.cl-button__security.cl-active {
+  background: #262626 !important;
+  color: #fff !important;
+}
+
+.dark .cl-navbarMobileMenuRow,
+.dark .cl-footer {
+  background: #222222 !important;
+}
+
+.dark .cl-internal-c2xpfh {
+  box-shadow: none !important;
+  background-color: #222222 !important;
+}
+
+.dark .cl-profileSectionPrimaryButton {
+  color: #ec0000e6 !important;
+}
+
+.dark
+  .cl-profileSectionPrimaryButton.cl-button.cl-profileSectionPrimaryButton__profile.cl-button__profile {
+  color: #fff !important;
+}
+
+.dark .cl-profileSection {
+  border-top: 1px solid #404040 !important;
+}
+
+.dark .cl-actionCard {
+  background: #404040 !important;
+}
+.dark .cl-avatarImageActionsUpload,
+.dark .cl-formButtonPrimary {
+  background: #e1e1e1 !important;
+  color: #000 !important;
+}
+
+.dark .cl-formButtonReset {
+  background: #101010 !important;
+  color: #fff !important;
+}
