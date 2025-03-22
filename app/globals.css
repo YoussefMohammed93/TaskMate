@@ -160,3 +160,7 @@
   background: #101010 !important;
   color: #fff !important;
 }
+
+.ProseMirror.bn-editor {
+  padding: 16px !important;
+}

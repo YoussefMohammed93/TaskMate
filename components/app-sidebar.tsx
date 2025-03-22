@@ -1,7 +1,6 @@
 "use client";
 
 import {
-  LayoutDashboard,
   Calendar,
   Target,
   BarChart3,
@@ -10,6 +9,8 @@ import {
   StickyNote,
   Trophy,
   Settings,
+  ScrollText,
+  LayoutDashboard,
 } from "lucide-react";
 import Link from "next/link";
 import { cn } from "@/lib/utils";
@@ -43,6 +44,11 @@ const mainItems = [
     title: "Notes",
     url: "/notes",
     icon: StickyNote,
+  },
+  {
+    title: "Documents",
+    url: "/documents",
+    icon: ScrollText,
   },
   {
     title: "Pomodoro",
