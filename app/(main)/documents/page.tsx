@@ -215,14 +215,15 @@ const DocumentCard = ({
   document: Document;
   onDelete: () => void;
 }) => (
-  <Card className="cursor-pointer overflow-hidden flex flex-col h-[22rem] lg:h-[25rem] group">
+  <Card className="cursor-pointer overflow-hidden flex flex-col h-[23.5rem] lg:h-[25rem] group">
     <div className="relative w-full h-32 lg:h-40 flex-shrink-0">
       {document.coverImage ? (
         <Image
           src={document.coverImage}
           alt={document.title}
-          className="object-cover"
-          fill
+          width={1920}
+          height={1080}
+          className="w-full h-full object-cover"
           sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 33vw"
         />
       ) : (
@@ -263,8 +264,9 @@ const DocumentCard = ({
               <Image
                 src={document.author.avatar}
                 alt={document.author.name}
-                className="object-cover"
-                fill
+                width={32}
+                height={32}
+                className="w-full h-full object-cover"
                 sizes="32px"
               />
             </div>

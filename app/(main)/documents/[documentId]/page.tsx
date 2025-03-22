@@ -46,8 +46,9 @@ function CoverImage({ url, onUpdate, onRemove }: CoverImageProps) {
         <Image
           src={url}
           alt="Cover"
-          fill
-          className="object-cover"
+          width={1920}
+          height={1080}
+          className="w-full h-full object-cover"
           onLoadingComplete={() => setIsLoading(false)}
         />
       )}

@@ -68,7 +68,7 @@ export default function Settings() {
             rootBox: "w-full",
             cardBox: "w-full shadow-none border bg-muted dark:bg-muted/20",
             card: "dark:bg-muted/20",
-            navbar: "dark:!bg-muted/20 dark:border-b dark:border-muted/30",
+            navbar: "dark:!bg-[#404040] dark:border-b dark:border-muted/30",
             pageScrollBox: "dark:bg-muted/20",
             formButtonPrimary: "dark:bg-primary",
             formButtonReset: "dark:bg-muted/50",
