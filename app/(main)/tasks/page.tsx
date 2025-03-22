@@ -115,11 +115,13 @@ interface RecurrencePattern {
 
 const categories = [
   "Work",
+  "Study",
   "Personal",
-  "Shopping",
-  "Health",
-  "Education",
-  "Finance",
+  "Sport",
+  "Programming",
+  "University",
+  "Praying",
+  "Reading",
 ] as const;
 
 const recurrenceOptions = [
@@ -754,7 +756,7 @@ export default function Tasks() {
     title: "",
     description: "",
     priority: "medium",
-    category: categories[0].toLowerCase(),
+    category: categories[0].toLowerCase(), // This will now default to "Work"
     dueDate: new Date(),
     status: "not_started",
     tags: [],
@@ -991,7 +993,14 @@ export default function Tasks() {
     </DropdownMenu>
   );
 
-  const TaskCard = ({ task }: { task: Task; children?: React.ReactNode }) => {
+  const TaskCard = ({
+    task,
+    view,
+  }: {
+    task: Task;
+    view: ViewType;
+    children?: React.ReactNode;
+  }) => {
     const priorityColor =
       priorityColors[task.priority as keyof typeof priorityColors];
     const completedSubtasks =
@@ -1011,8 +1020,15 @@ export default function Tasks() {
     return (
       <>
         <Card
-          className="cursor-pointer"
-          style={{ borderLeftColor: priorityColor.borderColor }}
+          className={cn(
+            "cursor-pointer",
+            view === "cards" ? "border" : "border-none shadow-sm"
+          )}
+          style={
+            view === "cards"
+              ? { borderLeftColor: priorityColor.borderColor }
+              : undefined
+          }
         >
           <CardHeader
             className="p-4 space-y-3"
@@ -1027,13 +1043,13 @@ export default function Tasks() {
               }
             }}
           >
-            <div className="flex items-start justify-between gap-2">
+            <div className="flex flex-col-reverse sm:flex-row items-start justify-between gap-2">
               <div className="flex-1 min-w-0">
                 <CardTitle className="text-base font-semibold line-clamp-1">
                   {task.title}
                 </CardTitle>
               </div>
-              <div className="flex items-center gap-2 task-actions">
+              <div className="flex items-center flex-row-reverse sm:flex-row gap-2 task-actions">
                 <TaskStatusDropdown
                   status={task.status}
                   onStatusChange={(newStatus) =>
@@ -1108,16 +1124,20 @@ export default function Tasks() {
                       : cn(
                           task.category.toLowerCase() === "work" &&
                             "text-blue-500 bg-blue-500/10",
-                          task.category.toLowerCase() === "personal" &&
+                          task.category.toLowerCase() === "study" &&
                             "text-purple-500 bg-purple-500/10",
-                          task.category.toLowerCase() === "shopping" &&
+                          task.category.toLowerCase() === "personal" &&
                             "text-green-500 bg-green-500/10",
-                          task.category.toLowerCase() === "health" &&
+                          task.category.toLowerCase() === "sport" &&
                             "text-red-500 bg-red-500/10",
-                          task.category.toLowerCase() === "education" &&
+                          task.category.toLowerCase() === "programming" &&
                             "text-yellow-500 bg-yellow-500/10",
-                          task.category.toLowerCase() === "finance" &&
-                            "text-orange-500 bg-orange-500/10"
+                          task.category.toLowerCase() === "university" &&
+                            "text-orange-500 bg-orange-500/10",
+                          task.category.toLowerCase() === "praying" &&
+                            "text-cyan-500 bg-cyan-500/10",
+                          task.category.toLowerCase() === "reading" &&
+                            "text-pink-500 bg-pink-500/10"
                         )
                   )}
                 >
@@ -1386,16 +1406,22 @@ export default function Tasks() {
                             "capitalize",
                             selectedTask.category.toLowerCase() === "work" &&
                               "text-blue-500 bg-blue-500/10",
+                            selectedTask.category.toLowerCase() === "study" &&
+                              "text-purple-500 bg-purple-500/10",
                             selectedTask.category.toLowerCase() ===
-                              "personal" && "text-purple-500 bg-purple-500/10",
-                            selectedTask.category.toLowerCase() ===
-                              "shopping" && "text-green-500 bg-green-500/10",
-                            selectedTask.category.toLowerCase() === "health" &&
+                              "personal" && "text-green-500 bg-green-500/10",
+                            selectedTask.category.toLowerCase() === "sport" &&
                               "text-red-500 bg-red-500/10",
                             selectedTask.category.toLowerCase() ===
-                              "education" && "text-yellow-500 bg-yellow-500/10",
-                            selectedTask.category.toLowerCase() === "finance" &&
-                              "text-orange-500 bg-orange-500/10"
+                              "programming" &&
+                              "text-yellow-500 bg-yellow-500/10",
+                            selectedTask.category.toLowerCase() ===
+                              "university" &&
+                              "text-orange-500 bg-orange-500/10",
+                            selectedTask.category.toLowerCase() === "praying" &&
+                              "text-cyan-500 bg-cyan-500/10",
+                            selectedTask.category.toLowerCase() === "reading" &&
+                              "text-pink-500 bg-pink-500/10"
                           )}
                         >
                           {selectedTask.category}
@@ -1466,7 +1492,7 @@ export default function Tasks() {
     );
 
     const renderTask = (task: Task) => (
-      <TaskCard key={task.id} task={task}>
+      <TaskCard key={task.id} task={task} view={view}>
         <Badge
           variant="outline"
           className={cn(
@@ -1549,7 +1575,7 @@ export default function Tasks() {
       {filteredTasks.length > 0 ? (
         <div className="grid grid-cols-1 xl:grid-cols-2 gap-4 md:pt-2">
           {filteredTasks.map((task) => (
-            <TaskCard key={task.id} task={task}>
+            <TaskCard key={task.id} task={task} view={view}>
               <Badge
                 variant="outline"
                 className={cn(
@@ -1627,7 +1653,7 @@ export default function Tasks() {
         title: "",
         description: "",
         priority: "medium",
-        category: categories[0].toLowerCase(),
+        category: categories[0].toLowerCase(), // This will now default to "Work"
         dueDate: new Date(),
         status: "not_started",
         tags: [],
@@ -1720,6 +1746,19 @@ export default function Tasks() {
         </div>
         <div className="flex lg:hidden items-center justify-between gap-2 w-full">
           <ViewToggle />
+          {/* Add New Task button for mobile */}
+          <Dialog
+            open={isNewTaskDialogOpen}
+            onOpenChange={setIsNewTaskDialogOpen}
+          >
+            <DialogTrigger asChild>
+              <Button variant="outline" className="dark:bg-muted/50">
+                <Plus className="h-4 w-4" />
+                <span>New Task</span>
+              </Button>
+            </DialogTrigger>
+            {/* Keep existing Dialog content */}
+          </Dialog>
         </div>
       </div>
       <div className="block lg:hidden">
@@ -1842,27 +1881,40 @@ export default function Tasks() {
                           <SelectValue>
                             {newTask.category && (
                               <div className="flex items-center gap-2">
-                                {categories
-                                  .map((c) => c.toLowerCase())
-                                  .includes(newTask.category) && (
-                                  <div
-                                    className={cn(
-                                      "w-3 h-3 rounded-full",
-                                      newTask.category.toLowerCase() ===
-                                        "work" && "bg-blue-500",
-                                      newTask.category.toLowerCase() ===
-                                        "personal" && "bg-purple-500",
-                                      newTask.category.toLowerCase() ===
-                                        "shopping" && "bg-green-500",
-                                      newTask.category.toLowerCase() ===
-                                        "health" && "bg-red-500",
-                                      newTask.category.toLowerCase() ===
-                                        "education" && "bg-yellow-500",
-                                      newTask.category.toLowerCase() ===
-                                        "finance" && "bg-orange-500"
-                                    )}
-                                  />
-                                )}
+                                <div
+                                  className={cn(
+                                    "w-3 h-3 rounded-full",
+                                    customCategories.find(
+                                      (cat) =>
+                                        cat.name.toLowerCase() ===
+                                        newTask.category
+                                    )?.color ||
+                                      (newTask.category.toLowerCase() ===
+                                        "work" &&
+                                        "bg-blue-500") ||
+                                      (newTask.category.toLowerCase() ===
+                                        "study" &&
+                                        "bg-purple-500") ||
+                                      (newTask.category.toLowerCase() ===
+                                        "personal" &&
+                                        "bg-green-500") ||
+                                      (newTask.category.toLowerCase() ===
+                                        "sport" &&
+                                        "bg-red-500") ||
+                                      (newTask.category.toLowerCase() ===
+                                        "programming" &&
+                                        "bg-yellow-500") ||
+                                      (newTask.category.toLowerCase() ===
+                                        "university" &&
+                                        "bg-orange-500") ||
+                                      (newTask.category.toLowerCase() ===
+                                        "praying" &&
+                                        "bg-cyan-500") ||
+                                      (newTask.category.toLowerCase() ===
+                                        "reading" &&
+                                        "bg-pink-500")
+                                  )}
+                                />
                                 {newTask.category.charAt(0).toUpperCase() +
                                   newTask.category.slice(1)}
                               </div>
@@ -1881,16 +1933,20 @@ export default function Tasks() {
                                     "w-3 h-3 rounded-full",
                                     category.toLowerCase() === "work" &&
                                       "bg-blue-500",
-                                    category.toLowerCase() === "personal" &&
+                                    category.toLowerCase() === "study" &&
                                       "bg-purple-500",
-                                    category.toLowerCase() === "shopping" &&
+                                    category.toLowerCase() === "personal" &&
                                       "bg-green-500",
-                                    category.toLowerCase() === "health" &&
+                                    category.toLowerCase() === "sport" &&
                                       "bg-red-500",
-                                    category.toLowerCase() === "education" &&
+                                    category.toLowerCase() === "programming" &&
                                       "bg-yellow-500",
-                                    category.toLowerCase() === "finance" &&
-                                      "bg-orange-500"
+                                    category.toLowerCase() === "university" &&
+                                      "bg-orange-500",
+                                    category.toLowerCase() === "praying" &&
+                                      "bg-cyan-500",
+                                    category.toLowerCase() === "reading" &&
+                                      "bg-pink-500"
                                   )}
                                 />
                                 {category}
@@ -1902,7 +1958,15 @@ export default function Tasks() {
                               key={category.name}
                               value={category.name.toLowerCase()}
                             >
-                              {category.name}
+                              <div className="flex items-center gap-2">
+                                <div
+                                  className={cn(
+                                    "w-3 h-3 rounded-full",
+                                    category.color
+                                  )}
+                                />
+                                {category.name}
+                              </div>
                             </SelectItem>
                           ))}
                           <SelectSeparator />
@@ -2124,33 +2188,6 @@ export default function Tasks() {
               </div>
             </DialogContent>
           </Dialog>
-        </div>
-      </div>
-      <div className="block lg:hidden">
-        <div className="flex items-center gap-2 overflow-x-auto pb-2 pt-5">
-          <Select value={priorityFilter} onValueChange={setPriorityFilter}>
-            <SelectTrigger className="min-w-[120px] whitespace-nowrap">
-              <SelectValue placeholder="Priority" />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="all">All Priorities</SelectItem>
-              {priorities.map((priority) => (
-                <SelectItem key={priority.value} value={priority.value}>
-                  {priority.label}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-          <Select value={statusFilter} onValueChange={setStatusFilter}>
-            <SelectTrigger className="min-w-[120px] whitespace-nowrap">
-              <SelectValue placeholder="Status" />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="all">All Tasks</SelectItem>
-              <SelectItem value="completed">Completed</SelectItem>
-              <SelectItem value="not_completed">Not Completed</SelectItem>
-            </SelectContent>
-          </Select>
         </div>
       </div>
       <div className="mt-2 lg:mt-4">

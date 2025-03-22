@@ -147,9 +147,17 @@ export function EditTaskDialog({
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
-                  {categories.map((category: string) => (
-                    <SelectItem key={category} value={category.toLowerCase()}>
-                      {category}
+                  {categories.map((category) => (
+                    <SelectItem
+                      key={category.name}
+                      value={category.name.toLowerCase()}
+                    >
+                      <div className="flex items-center gap-2">
+                        <div
+                          className={cn("w-3 h-3 rounded-full", category.color)}
+                        />
+                        {category.name}
+                      </div>
                     </SelectItem>
                   ))}
                   {customCategories.map((category) => (

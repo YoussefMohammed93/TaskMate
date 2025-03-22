@@ -5,12 +5,14 @@ export const priorities = [
 ] as const;
 
 export const categories = [
-  "Work",
-  "Personal",
-  "Shopping",
-  "Health",
-  "Education",
-  "Finance",
+  { name: "Work", color: "bg-blue-500" },
+  { name: "Study", color: "bg-purple-500" },
+  { name: "Personal", color: "bg-green-500" },
+  { name: "Sport", color: "bg-red-500" },
+  { name: "Programming", color: "bg-yellow-500" },
+  { name: "University", color: "bg-orange-500" },
+  { name: "Praying", color: "bg-cyan-500" },
+  { name: "Reading", color: "bg-pink-500" },
 ] as const;
 
 export const categoryColors = [
@@ -20,6 +22,8 @@ export const categoryColors = [
   { value: "bg-purple-500", label: "Purple" },
   { value: "bg-orange-500", label: "Orange" },
   { value: "bg-yellow-500", label: "Yellow" },
+  { value: "bg-cyan-500", label: "Cyan" },
+  { value: "bg-pink-500", label: "Pink" },
 ] as const;
 
 export const defaultTags = [
@@ -30,3 +34,6 @@ export const defaultTags = [
   { id: "5", name: "Enhancement", color: "green" },
 ] as const;
 
+export type Category = (typeof categories)[number];
+export type CategoryColor = (typeof categoryColors)[number]["value"];
+export type Priority = (typeof priorities)[number]["value"];
