@@ -6,13 +6,15 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
+import { Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 
 interface DeleteTaskDialogProps {
   isOpen: boolean;
   onOpenChange: (open: boolean) => void;
   taskTitle: string;
-  onDelete: () => void;
+  onDelete: () => Promise<void>;
+  isDeleting?: boolean;
 }
 
 export function DeleteTaskDialog({
@@ -20,6 +22,7 @@ export function DeleteTaskDialog({
   onOpenChange,
   taskTitle,
   onDelete,
+  isDeleting = false,
 }: DeleteTaskDialogProps) {
   return (
     <Dialog open={isOpen} onOpenChange={onOpenChange}>
@@ -32,11 +35,34 @@ export function DeleteTaskDialog({
           </DialogDescription>
         </DialogHeader>
         <DialogFooter className="mt-4">
-          <Button variant="outline" onClick={() => onOpenChange(false)}>
+          <Button
+            variant="outline"
+            onClick={(e) => {
+              e.preventDefault();
+              e.stopPropagation();
+              onOpenChange(false);
+            }}
+            disabled={isDeleting}
+          >
             Cancel
           </Button>
-          <Button variant="destructive" onClick={onDelete}>
-            Delete
+          <Button
+            variant="destructive"
+            onClick={(e) => {
+              e.preventDefault();
+              e.stopPropagation();
+              onDelete();
+            }}
+            disabled={isDeleting}
+          >
+            {isDeleting ? (
+              <>
+                <Loader2 className="h-4 w-4 animate-spin" />
+                Deleting...
+              </>
+            ) : (
+              "Delete"
+            )}
           </Button>
         </DialogFooter>
       </DialogContent>

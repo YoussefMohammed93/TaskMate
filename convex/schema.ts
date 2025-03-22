@@ -9,4 +9,40 @@ export default defineSchema({
     firstName: v.optional(v.string()),
     lastName: v.optional(v.string()),
   }).index("byClerkUserId", ["clerkUserId"]),
+
+  tasks: defineTable({
+    title: v.string(),
+    description: v.string(),
+    priority: v.string(),
+    category: v.string(),
+    dueDate: v.string(),
+    status: v.string(),
+    userId: v.string(),
+    createdAt: v.string(),
+    updatedAt: v.optional(v.string()),
+    tags: v.array(
+      v.object({
+        id: v.string(),
+        name: v.string(),
+        color: v.string(),
+      })
+    ),
+    subtasks: v.array(
+      v.object({
+        id: v.number(),
+        title: v.string(),
+        completed: v.boolean(),
+      })
+    ),
+    recurrence: v.optional(
+      v.object({
+        frequency: v.string(),
+        interval: v.number(),
+        endDate: v.optional(v.string()),
+        occurrences: v.optional(v.number()),
+        daysOfWeek: v.optional(v.array(v.number())),
+        dayOfMonth: v.optional(v.number()),
+      })
+    ),
+  }).index("by_user", ["userId"]),
 });

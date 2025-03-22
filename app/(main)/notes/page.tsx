@@ -718,7 +718,12 @@ function NoteCard({ note, onPin, onDelete }: NoteCardProps) {
       <Card
         className="relative p-4 cursor-pointer hover:bg-muted/50 transition-colors"
         onClick={(e) => {
-          if (!(e.target as HTMLElement).closest(".note-actions")) {
+          const target = e.target as HTMLElement;
+          const isInteractive = target.closest(
+            '.note-actions, button, [role="checkbox"], [role="combobox"]'
+          );
+
+          if (!isInteractive) {
             setIsDetailsSheetOpen(true);
           }
         }}

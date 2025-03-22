@@ -1,4 +1,3 @@
-/* eslint-disable @typescript-eslint/no-unused-vars */
 "use client";
 
 import {
@@ -18,21 +17,14 @@ import {
   Pencil,
   Trash2,
   Search,
-  Table as TableIcon,
+  RefreshCw,
+  ClipboardX,
 } from "lucide-react";
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-} from "@/components/ui/card";
+import { toast } from "sonner";
 import {
   Dialog,
   DialogClose,
   DialogContent,
-  DialogDescription,
-  DialogFooter,
   DialogHeader,
   DialogTitle,
   DialogTrigger,
@@ -46,18 +38,9 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from "@/components/ui/table";
-import {
   Sheet,
   SheetContent,
   SheetHeader,
-  SheetOverlay,
   SheetTitle,
 } from "@/components/ui/sheet";
 import { cn } from "@/lib/utils";
@@ -68,21 +51,29 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { useEffect, useState } from "react";
+import { priorities } from "./constants";
+import { addMonths, setDay } from "date-fns";
+import { api } from "@/convex/_generated/api";
 import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Switch } from "@/components/ui/switch";
 import { useIsMobile } from "@/hooks/use-mobile";
+import { Id } from "@/convex/_generated/dataModel";
 import { Textarea } from "@/components/ui/textarea";
+import { Progress } from "@/components/ui/progress";
+import { TagSelect } from "./components/tag-select";
 import { Checkbox } from "@/components/ui/checkbox";
+import { useEffect, useMemo, useState } from "react";
+import { useMutation, useQuery } from "convex/react";
 import { EditTaskDialog } from "./components/edit-task-dialog";
-import { addMonths, addDays, addWeeks, setDay } from "date-fns";
 import { DeleteTaskDialog } from "./components/delete-task-dialog";
+import { EditSubtaskDialog } from "./components/edit-subtask-dialog";
 import { Calendar as CalendarComponent } from "@/components/ui/calendar";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 
-type ViewType = "table" | "board" | "cards";
+type ViewType = "board" | "cards";
 
 type Tag = {
   id: string;
@@ -109,6 +100,8 @@ interface Task {
   tags: Tag[];
   subtasks: { id: number; title: string; completed: boolean }[];
   recurrence?: RecurrencePattern | null;
+  createdAt: string;
+  updatedAt?: string;
 }
 
 interface RecurrencePattern {
@@ -120,18 +113,6 @@ interface RecurrencePattern {
   occurrences?: number | null;
 }
 
-// const taskStatuses = [
-//   { value: "not_started", label: "Not Started" },
-//   { value: "in_progress", label: "In Progress" },
-//   { value: "completed", label: "Completed" },
-// ] as const;
-
-const priorities = [
-  { value: "high", label: "High", color: "text-red-500" },
-  { value: "medium", label: "Medium", color: "text-yellow-500" },
-  { value: "low", label: "Low", color: "text-green-500" },
-] as const;
-
 const categories = [
   "Work",
   "Personal",
@@ -139,14 +120,6 @@ const categories = [
   "Health",
   "Education",
   "Finance",
-] as const;
-
-const defaultTags = [
-  { id: "1", name: "Bug", color: "red" },
-  { id: "2", name: "Feature", color: "blue" },
-  { id: "3", name: "Documentation", color: "purple" },
-  { id: "4", name: "Urgent", color: "orange" },
-  { id: "5", name: "Enhancement", color: "green" },
 ] as const;
 
 const recurrenceOptions = [
@@ -169,14 +142,17 @@ const priorityColors = {
   low: {
     text: "text-blue-500",
     bg: "bg-blue-500/10",
+    borderColor: "border-blue-500",
   },
   medium: {
     text: "text-yellow-500",
     bg: "bg-yellow-500/10",
+    borderColor: "border-yellow-500",
   },
   high: {
     text: "text-red-500",
     bg: "bg-red-500/10",
+    borderColor: "border-red-500",
   },
 } as const;
 
@@ -234,130 +210,12 @@ const RecurringIndicator = ({
   };
 
   return (
-    <div className="flex items-center gap-1 text-muted-foreground">
+    <div className="flex items-center gap-2 text-muted-foreground">
       <Repeat className="h-4 w-4" />
       <span className="text-xs">{getRecurrenceText()}</span>
     </div>
   );
 };
-
-const exampleTasks: Task[] = [
-  {
-    id: "1",
-    title: "Complete project presentation",
-    description: "Prepare slides and demo for the quarterly review meeting",
-    priority: "high",
-    category: "Work",
-    dueDate: new Date(),
-    status: "in_progress",
-    tags: [
-      { id: "1", name: "urgent", color: "orange" },
-      { id: "2", name: "documentation", color: "purple" },
-    ],
-    subtasks: [
-      { id: 1, title: "Create slides", completed: true },
-      { id: 2, title: "Prepare demo", completed: false },
-    ],
-  },
-  {
-    id: "2",
-    title: "Review documentation",
-    description: "Review and update project documentation",
-    priority: "medium",
-    category: "Work",
-    dueDate: new Date(),
-    status: "not_started",
-    tags: [{ id: "3", name: "documentation", color: "purple" }],
-    subtasks: [
-      { id: 3, title: "Read current docs", completed: false },
-      { id: 4, title: "Update outdated sections", completed: false },
-    ],
-  },
-  {
-    id: "3",
-    title: "Team meeting notes",
-    description: "Write up and share meeting notes",
-    priority: "low",
-    category: "Work",
-    dueDate: new Date(),
-    status: "completed",
-    tags: [{ id: "5", name: "enhancement", color: "green" }],
-    subtasks: [
-      { id: 5, title: "Draft notes", completed: true },
-      { id: 6, title: "Share with team", completed: true },
-    ],
-  },
-  {
-    id: "4",
-    title: "Weekly Team Meeting",
-    description: "Regular team sync-up meeting",
-    priority: "medium",
-    category: "Work",
-    dueDate: new Date(),
-    status: "not_started",
-    tags: [{ id: "1", name: "recurring", color: "blue" }],
-    subtasks: [
-      { id: 7, title: "Prepare agenda", completed: false },
-      { id: 8, title: "Send meeting notes", completed: false },
-    ],
-    recurrence: {
-      frequency: "weekly",
-      interval: 1,
-      daysOfWeek: [1],
-      endDate: null,
-    },
-  },
-  {
-    id: "5",
-    title: "Team Stand-up",
-    description: "Daily team sync meeting",
-    priority: "medium",
-    category: "Work",
-    dueDate: new Date(),
-    status: "not_started",
-    tags: [{ id: "1", name: "meeting", color: "blue" }],
-    subtasks: [],
-    recurrence: {
-      frequency: "daily",
-      interval: 1,
-      endDate: null,
-    },
-  },
-  {
-    id: "6",
-    title: "Weekly Report",
-    description: "Submit weekly progress report",
-    priority: "high",
-    category: "Work",
-    dueDate: new Date(),
-    status: "not_started",
-    tags: [{ id: "2", name: "report", color: "purple" }],
-    subtasks: [],
-    recurrence: {
-      frequency: "weekly",
-      interval: 1,
-      daysOfWeek: [5],
-      endDate: null,
-    },
-  },
-  {
-    id: "7",
-    title: "Monthly Budget Review",
-    description: "Review and adjust monthly budget",
-    priority: "high",
-    category: "Finance",
-    dueDate: new Date(),
-    status: "not_started",
-    tags: [{ id: "3", name: "finance", color: "green" }],
-    subtasks: [],
-    recurrence: {
-      frequency: "monthly",
-      interval: 1,
-      dayOfMonth: 1,
-      endDate: null,
-    },
-  },
-];
 
 interface Task {
   id: string;
@@ -370,6 +228,8 @@ interface Task {
   tags: Tag[];
   subtasks: Subtask[];
   recurrence?: RecurrencePattern | null;
+  createdAt: string;
+  updatedAt?: string;
 }
 
 type CategoryColor = (typeof categoryColors)[number]["value"];
@@ -392,20 +252,31 @@ const TaskStatusDropdown = ({
 
   return (
     <DropdownMenu>
-      <DropdownMenuTrigger asChild className="dark:bg-muted">
+      <DropdownMenuTrigger
+        asChild
+        className="dark:bg-muted task-actions"
+        onClick={(e) => e.stopPropagation()}
+      >
         <Button variant="outline" size="sm" className="h-8">
           <StatusIcon className={cn("h-4 w-4", currentStatus.className)} />
           {currentStatus.label}
           <ChevronDown className="ml-2 h-4 w-4" />
         </Button>
       </DropdownMenuTrigger>
-      <DropdownMenuContent align="end" className="dark:bg-secondary">
+      <DropdownMenuContent
+        align="end"
+        className="dark:bg-secondary"
+        onClick={(e) => e.stopPropagation()}
+      >
         {Object.entries(taskStatusConfig).map(([value, config]) => {
           const ItemIcon = config.icon;
           return (
             <DropdownMenuItem
               key={value}
-              onClick={() => onStatusChange(value)}
+              onClick={(e) => {
+                e.stopPropagation();
+                onStatusChange(value);
+              }}
               className="flex items-center justify-between"
             >
               <div className="flex items-center">
@@ -479,156 +350,6 @@ const TagBadge = ({ tag, onRemove }: { tag: Tag; onRemove?: () => void }) => {
   );
 };
 
-interface CustomTag {
-  id: string;
-  name: string;
-  color: string;
-}
-
-const TagSelect = ({
-  selectedTags,
-  onTagSelect,
-}: {
-  selectedTags: Tag[];
-  onTagSelect: (tag: Tag) => void;
-}) => {
-  const [isAddingCustomTag, setIsAddingCustomTag] = useState(false);
-  const [newCustomTag, setNewCustomTag] = useState<CustomTag>({
-    id: "",
-    name: "",
-    color: "red",
-  });
-
-  const tagColors = [
-    { value: "red", label: "Red" },
-    { value: "blue", label: "Blue" },
-    { value: "green", label: "Green" },
-    { value: "purple", label: "Purple" },
-    { value: "orange", label: "Orange" },
-    { value: "yellow", label: "Yellow" },
-  ];
-
-  if (isAddingCustomTag) {
-    return (
-      <div className="space-y-4">
-        <div className="flex flex-col sm:flex-row gap-2">
-          <div className="flex-1 space-y-2">
-            <Input
-              placeholder="Enter tag name"
-              value={newCustomTag.name}
-              onChange={(e) =>
-                setNewCustomTag({
-                  ...newCustomTag,
-                  name: e.target.value,
-                })
-              }
-            />
-          </div>
-          <Select
-            value={newCustomTag.color}
-            onValueChange={(value) =>
-              setNewCustomTag({
-                ...newCustomTag,
-                color: value,
-              })
-            }
-          >
-            <SelectTrigger className="w-full sm:w-[180px]">
-              <SelectValue />
-            </SelectTrigger>
-            <SelectContent>
-              {tagColors.map((color) => (
-                <SelectItem key={color.value} value={color.value}>
-                  <div className="flex items-center gap-2">
-                    <div
-                      className={cn(
-                        "w-3 h-3 rounded-full",
-                        `bg-${color.value}-500`
-                      )}
-                    />
-                    {color.label}
-                  </div>
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-        </div>
-        <div className="flex flex-col sm:flex-row gap-2">
-          <Button
-            variant="outline"
-            className="w-full sm:w-auto order-2 sm:order-1"
-            onClick={() => {
-              setIsAddingCustomTag(false);
-              setNewCustomTag({
-                id: "",
-                name: "",
-                color: "red",
-              });
-            }}
-          >
-            Cancel
-          </Button>
-          <Button
-            className="w-full sm:w-auto order-1 sm:order-2"
-            disabled={newCustomTag.name.length < 2}
-            onClick={() => {
-              if (newCustomTag.name) {
-                const newTag: Tag = {
-                  id: crypto.randomUUID(),
-                  name: newCustomTag.name.toLowerCase(),
-                  color: newCustomTag.color,
-                };
-                onTagSelect(newTag);
-                setIsAddingCustomTag(false);
-                setNewCustomTag({
-                  id: "",
-                  name: "",
-                  color: "red",
-                });
-              }
-            }}
-          >
-            Add Tag
-          </Button>
-        </div>
-      </div>
-    );
-  }
-
-  return (
-    <Select
-      onValueChange={(value) => {
-        if (value === "custom") {
-          setIsAddingCustomTag(true);
-        } else {
-          const selectedTag = defaultTags.find((tag) => tag.id === value);
-          if (selectedTag) onTagSelect(selectedTag);
-        }
-      }}
-    >
-      <SelectTrigger>
-        <SelectValue placeholder="Add tag" />
-      </SelectTrigger>
-      <SelectContent>
-        {defaultTags
-          .filter((tag) => !selectedTags.find((t) => t.id === tag.id))
-          .map((tag) => (
-            <SelectItem key={tag.id} value={tag.id}>
-              <div className="flex items-center gap-2">
-                <div
-                  className={cn("w-3 h-3 rounded-full", `bg-${tag.color}-500`)}
-                />
-                {tag.name}
-              </div>
-            </SelectItem>
-          ))}
-        <SelectSeparator />
-        <SelectItem value="custom">+ Add Custom Tag</SelectItem>
-      </SelectContent>
-    </Select>
-  );
-};
-
 const RecurrenceSelector = ({
   value,
   onChange,
@@ -636,7 +357,7 @@ const RecurrenceSelector = ({
   value: RecurrencePattern | null;
   onChange: (pattern: RecurrencePattern | null) => void;
 }) => {
-  const [showCustom, setShowCustom] = useState(false);
+  const [, setShowCustom] = useState(false);
 
   const handleFrequencyChange = (frequency: RecurrenceFrequency) => {
     if (frequency === "custom") {
@@ -669,7 +390,6 @@ const RecurrenceSelector = ({
         />
         <Label>Recurring Task</Label>
       </div>
-
       {value && (
         <div className="grid gap-4">
           <div className="grid gap-2">
@@ -831,7 +551,6 @@ const RecurrenceSelector = ({
                       selected={value.endDate}
                       onSelect={(newDate) => {
                         onChange({ ...value, endDate: newDate });
-                        // Close the dialog after selection
                         const closeButton = document.querySelector(
                           "[data-dialog-close]"
                         );
@@ -856,54 +575,154 @@ interface TaskActionsProps {
   task: Task;
   customCategories: CustomCategory[];
   setCustomCategories: React.Dispatch<React.SetStateAction<CustomCategory[]>>;
-  setTasks: React.Dispatch<React.SetStateAction<Task[]>>;
+  selectedTask: Task | null;
+  setSelectedTask: React.Dispatch<React.SetStateAction<Task | null>>;
 }
 
 const TaskActions = ({
   task,
-  customCategories,
-  setCustomCategories,
-  setTasks,
+  selectedTask,
+  setSelectedTask,
 }: TaskActionsProps) => {
+  const [isDeleting, setIsDeleting] = useState(false);
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
-  const [editedTask, setEditedTask] = useState(task);
   const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
+  const [isEditing, setIsEditing] = useState(false);
+  const updateTask = useMutation(api.tasks.updateTask);
 
-  const handleSaveTask = (updatedTask: Task) => {
-    setTasks((prevTasks: Task[]) =>
-      prevTasks.map((t) => (t.id === task.id ? updatedTask : t))
-    );
+  const handleSaveTask = async (editedTask: Task) => {
+    const toastId = toast.loading(`Updating "${editedTask.title}"...`);
+
+    try {
+      setIsEditing(true);
+      await updateTask({
+        taskId: editedTask.id as Id<"tasks">,
+        title: editedTask.title,
+        description: editedTask.description,
+        priority: editedTask.priority,
+        category: editedTask.category,
+        dueDate: editedTask.dueDate.toISOString(),
+        status: editedTask.status,
+        tags: editedTask.tags,
+        subtasks: editedTask.subtasks,
+        recurrence: editedTask.recurrence
+          ? {
+              frequency: editedTask.recurrence.frequency,
+              interval: editedTask.recurrence.interval,
+              endDate: editedTask.recurrence.endDate?.toISOString(),
+              occurrences: editedTask.recurrence.occurrences ?? undefined,
+              daysOfWeek: editedTask.recurrence.daysOfWeek,
+              dayOfMonth: editedTask.recurrence.dayOfMonth,
+            }
+          : undefined,
+      });
+
+      if (selectedTask && selectedTask.id === editedTask.id) {
+        setSelectedTask({
+          ...editedTask,
+          createdAt: selectedTask.createdAt,
+          updatedAt: new Date().toISOString(),
+        });
+      }
+
+      toast.success("Task updated successfully", {
+        id: toastId,
+        description: `"${editedTask.title}" has been updated.`,
+      });
+    } catch (error) {
+      console.error("Failed to update task:", error);
+      toast.error("Failed to update task", {
+        id: toastId,
+        description: "Please try again later.",
+      });
+    } finally {
+      setIsEditing(false);
+    }
+  };
+
+  const deleteTask = useMutation(api.tasks.deleteTask);
+
+  const handleDeleteTask = async () => {
+    const toastId = toast.loading(`Deleting "${task.title}"...`);
+    try {
+      setIsDeleting(true);
+      await deleteTask({
+        taskId: task.id as Id<"tasks">,
+      });
+      setIsDeleteDialogOpen(false);
+      toast.success("Task deleted successfully", {
+        id: toastId,
+        description: `"${task.title}" has been deleted.`,
+      });
+    } catch (error) {
+      console.error("Failed to delete task:", error);
+      toast.error("Failed to delete task", {
+        id: toastId,
+        description: "Please try again later.",
+      });
+    } finally {
+      setIsDeleting(false);
+    }
   };
 
   return (
     <div className="flex items-center gap-2">
-      {/* <EditTaskDialog
-        // task={task}
-        // editedTask={editedTask}
-        // customCategories={customCategories}
-        // setCustomCategories={setCustomCategories}
-        // isOpen={isEditDialogOpen}
-        // onOpenChange={setIsEditDialogOpen}
-      /> */}
-
+      <EditTaskDialog
+        task={{
+          ...task,
+          recurrence: task.recurrence
+            ? {
+                ...task.recurrence,
+                frequency: task.recurrence.frequency as
+                  | "daily"
+                  | "weekly"
+                  | "monthly"
+                  | "yearly"
+                  | "custom",
+              }
+            : null,
+        }}
+        isOpen={isEditDialogOpen}
+        onOpenChange={setIsEditDialogOpen}
+        onSave={async (task: import("./types").Task) => {
+          await handleSaveTask({
+            id: task.id,
+            title: task.title,
+            description: task.description || "",
+            priority: task.priority,
+            category: task.category,
+            dueDate: task.dueDate, // Add dueDate
+            tags: task.tags,
+            subtasks: task.subtasks || [],
+            recurrence: task.recurrence
+              ? {
+                  ...task.recurrence,
+                  frequency: task.recurrence.frequency as
+                    | "daily"
+                    | "weekly"
+                    | "monthly"
+                    | "custom",
+                }
+              : null,
+            status: task.status,
+            createdAt: task.createdAt, // Add createdAt
+          });
+        }}
+        isEditing={isEditing}
+        customCategories={[]}
+      />
       <DeleteTaskDialog
         isOpen={isDeleteDialogOpen}
         onOpenChange={setIsDeleteDialogOpen}
         taskTitle={task.title}
-        onDelete={() => {
-          setTasks((prevTasks) => prevTasks.filter((t) => t.id !== task.id));
-          setIsDeleteDialogOpen(false);
-        }}
+        onDelete={handleDeleteTask}
+        isDeleting={isDeleting}
       />
-
       <Button
         variant="outline"
         size="icon"
         className="h-8 w-8"
-        onClick={() => {
-          setEditedTask(task);
-          setIsEditDialogOpen(true);
-        }}
+        onClick={() => setIsEditDialogOpen(true)}
       >
         <Pencil className="h-4 w-4" />
       </Button>
@@ -922,69 +741,223 @@ const TaskActions = ({
 export default function Tasks() {
   const [mounted, setMounted] = useState(false);
   const [view, setView] = useState<ViewType>("board");
-  const [tasks, setTasks] = useState(exampleTasks);
-  const [selectedFilterTags, setSelectedFilterTags] = useState<Tag[]>([]);
+  const [selectedFilterTags] = useState<Tag[]>([]);
   const [searchQuery, setSearchQuery] = useState("");
+  const [priorityFilter, setPriorityFilter] = useState("all");
+  const [statusFilter, setStatusFilter] = useState("all");
   const [date, setDate] = useState<Date | undefined>(new Date());
-
   const [customCategories, setCustomCategories] = useState<CustomCategory[]>(
     []
   );
-
-  const [priorityFilter, setPriorityFilter] = useState<string>("all");
-  const [statusFilter, setStatusFilter] = useState<string>("all");
-
-  const [newTask, setNewTask] = useState({
+  const [newTask, setNewTask] = useState<Task>({
+    id: "",
     title: "",
     description: "",
     priority: "medium",
-    category: "",
+    category: categories[0].toLowerCase(),
     dueDate: new Date(),
-    tags: [] as Tag[],
-    recurrence: null as RecurrencePattern | null,
+    status: "not_started",
+    tags: [],
+    subtasks: [],
+    recurrence: null,
+    createdAt: new Date().toISOString(),
   });
-
   const [isAddingCustomCategory, setIsAddingCustomCategory] = useState(false);
-  const [newCustomCategory, setNewCustomCategory] = useState({
+  const [newCustomCategory, setNewCustomCategory] = useState<CustomCategory>({
     name: "",
     color: categoryColors[0].value,
   });
-
-  const [isTaskSheetOpen, setIsTaskSheetOpen] = useState(false);
   const [selectedTask, setSelectedTask] = useState<Task | null>(null);
+  const [isTaskSheetOpen, setIsTaskSheetOpen] = useState(false);
+  const [newSubtaskTitle, setNewSubtaskTitle] = useState("");
+  const [isNewTaskDialogOpen, setIsNewTaskDialogOpen] = useState(false);
+  const [isCreating, setIsCreating] = useState(false);
+  const [tagSelectKey, setTagSelectKey] = useState(0);
+  const [editingSubtask, setEditingSubtask] = useState<{
+    id: string;
+    title: string;
+  } | null>(null);
+  const [deletingSubtask, setDeletingSubtask] = useState<{
+    id: string;
+    title: string;
+  } | null>(null);
+  const [isDeletingSubtaskId, setIsDeletingSubtaskId] = useState<string | null>(
+    null
+  );
+  const [isEditingSubtaskId, setIsEditingSubtaskId] = useState<string | null>(
+    null
+  );
 
-  const filteredTasks = tasks.filter((task) => {
-    const matchesSearch =
-      task.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      task.description.toLowerCase().includes(searchQuery.toLowerCase());
+  const updateSubtask = useMutation(api.tasks.updateSubtask);
+  const deleteSubtask = useMutation(api.tasks.deleteSubtask);
 
-    const matchesTags =
-      selectedFilterTags.length === 0 ||
-      selectedFilterTags.every((filterTag) =>
-        task.tags.some((taskTag) => taskTag.id === filterTag.id)
-      );
+  const handleUpdateSubtask = async (
+    taskId: Id<"tasks">,
+    subtaskId: string,
+    newTitle: string
+  ) => {
+    setIsEditingSubtaskId(subtaskId);
+    try {
+      await updateSubtask({ taskId, subtaskId, title: newTitle });
 
-    const matchesPriority =
-      priorityFilter === "all" || task.priority === priorityFilter;
+      if (selectedTask && selectedTask.id === taskId) {
+        setSelectedTask({
+          ...selectedTask,
+          subtasks: selectedTask.subtasks.map((subtask) =>
+            subtask.id.toString() === subtaskId
+              ? { ...subtask, title: newTitle }
+              : subtask
+          ),
+        });
+      }
+    } catch (error) {
+      throw error;
+    } finally {
+      setIsEditingSubtaskId(null);
+    }
+  };
 
-    const matchesStatus =
-      statusFilter === "all" ||
-      (statusFilter === "completed" && task.status === "completed") ||
-      (statusFilter === "not_completed" && task.status !== "completed");
+  const handleDeleteSubtask = async (
+    taskId: Id<"tasks">,
+    subtaskId: string
+  ) => {
+    const toastId = toast.loading(`Deleting subtask...`);
+    setIsDeletingSubtaskId(subtaskId);
+    try {
+      await deleteSubtask({ taskId, subtaskId });
 
-    return matchesSearch && matchesTags && matchesPriority && matchesStatus;
-  });
+      if (selectedTask && selectedTask.id === taskId) {
+        setSelectedTask({
+          ...selectedTask,
+          subtasks: selectedTask.subtasks.filter(
+            (subtask) => subtask.id.toString() !== subtaskId
+          ),
+        });
+      }
+      setDeletingSubtask(null);
+      toast.success("Subtask deleted successfully", {
+        id: toastId,
+        description: `"${deletingSubtask?.title}" has been deleted.`,
+      });
+    } catch (error) {
+      console.error(error);
+      toast.error("Failed to delete subtask", {
+        id: toastId,
+        description: "Please try again later.",
+      });
+    } finally {
+      setIsDeletingSubtaskId(null);
+    }
+  };
+
+  const addNewSubtask = () => {
+    if (newSubtaskTitle.trim()) {
+      const newSubtask = {
+        id: newTask.subtasks.length + 1,
+        title: newSubtaskTitle.trim(),
+        completed: false,
+      };
+      setNewTask({
+        ...newTask,
+        subtasks: [...newTask.subtasks, newSubtask],
+      });
+      setNewSubtaskTitle("");
+    }
+  };
+
+  const tasks = useQuery(api.tasks.list);
+  const isLoading = tasks === undefined || !mounted;
+
+  useEffect(() => {
+    const savedView = localStorage.getItem("tasksView");
+    if (savedView && (savedView === "board" || savedView === "cards")) {
+      setView(savedView as ViewType);
+    }
+    setMounted(true);
+  }, []);
+
+  const transformedTasks: Task[] = useMemo(() => {
+    if (!tasks) return [];
+
+    return tasks.map((task) => ({
+      id: task._id,
+      title: task.title,
+      description: task.description,
+      priority: task.priority,
+      category: task.category,
+      dueDate: new Date(task.dueDate),
+      status: task.status,
+      tags: task.tags || [],
+      subtasks: task.subtasks || [],
+      createdAt: task.createdAt,
+      updatedAt: task.updatedAt,
+      recurrence: task.recurrence
+        ? {
+            frequency: task.recurrence.frequency as RecurrenceFrequency,
+            interval: task.recurrence.interval,
+            daysOfWeek: task.recurrence.daysOfWeek,
+            dayOfMonth: task.recurrence.dayOfMonth,
+            endDate: task.recurrence.endDate
+              ? new Date(task.recurrence.endDate)
+              : undefined,
+            occurrences: task.recurrence.occurrences,
+          }
+        : undefined,
+    }));
+  }, [tasks]);
+
+  const filteredTasks = useMemo(() => {
+    return transformedTasks.filter((task) => {
+      const matchesSearch =
+        task.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
+        task.description.toLowerCase().includes(searchQuery.toLowerCase());
+
+      const matchesTags =
+        selectedFilterTags.length === 0 ||
+        selectedFilterTags.every((filterTag) =>
+          task.tags.some((taskTag) => taskTag.id === filterTag.id)
+        );
+
+      const matchesPriority =
+        priorityFilter === "all" || task.priority === priorityFilter;
+
+      const matchesStatus =
+        statusFilter === "all" ||
+        (statusFilter === "completed" && task.status === "completed") ||
+        (statusFilter === "not_completed" && task.status !== "completed");
+
+      return matchesSearch && matchesTags && matchesPriority && matchesStatus;
+    });
+  }, [
+    transformedTasks,
+    searchQuery,
+    selectedFilterTags,
+    priorityFilter,
+    statusFilter,
+  ]);
 
   useEffect(() => {
     localStorage.setItem("taskView", view);
   }, [view]);
 
-  const handleStatusChange = (taskId: string, newStatus: string) => {
-    setTasks(
-      tasks.map((task) =>
-        task.id === taskId ? { ...task, status: newStatus } : task
-      )
-    );
+  const updateTaskStatus = useMutation(api.tasks.updateTaskStatus);
+
+  const handleStatusChange = async (taskId: Id<"tasks">, newStatus: string) => {
+    try {
+      await updateTaskStatus({
+        taskId,
+        status: newStatus,
+      });
+
+      if (selectedTask && selectedTask.id === taskId) {
+        setSelectedTask({
+          ...selectedTask,
+          status: newStatus,
+        });
+      }
+    } catch (error) {
+      console.error("Failed to update task status:", error);
+    }
   };
 
   const ViewToggle = () => (
@@ -993,19 +966,18 @@ export default function Tasks() {
         <Button variant="outline" className="gap-2">
           {view === "board" && <Columns className="h-4 w-4" />}
           {view === "cards" && <LayoutGrid className="h-4 w-4" />}
-          {view === "table" && <TableIcon className="h-4 w-4" />}
           {view.charAt(0).toUpperCase() + view.slice(1)} View
           <ChevronDown className="h-4 w-4" />
         </Button>
       </DropdownMenuTrigger>
-      <DropdownMenuContent className="dark:bg-secondary">
+      <DropdownMenuContent className="dark:bg-secondary" align="end">
         <DropdownMenuItem
           onClick={() => {
             setView("board");
             localStorage.setItem("tasksView", "board");
           }}
         >
-          <Columns className="h-4 w-4 mr-2" /> Board View
+          <Columns className="h-4 w-4" /> Board View
         </DropdownMenuItem>
         <DropdownMenuItem
           onClick={() => {
@@ -1013,378 +985,467 @@ export default function Tasks() {
             localStorage.setItem("tasksView", "cards");
           }}
         >
-          <LayoutGrid className="h-4 w-4 mr-2" /> Cards View
-        </DropdownMenuItem>
-        <DropdownMenuItem
-          onClick={() => {
-            setView("table");
-            localStorage.setItem("tasksView", "table");
-          }}
-        >
-          <TableIcon className="h-4 w-4 mr-2" /> Table View
+          <LayoutGrid className="h-4 w-4" /> Cards View
         </DropdownMenuItem>
       </DropdownMenuContent>
     </DropdownMenu>
   );
 
-  const TableView = () => (
-    <>
-      {filteredTasks.length > 0 ? (
-        <div className="rounded-md border overflow-auto md:mt-4">
-          <Table>
-            <TableHeader className="dark:bg-secondary">
-              <TableRow>
-                <TableHead className="min-w-[200px]">Task</TableHead>
-                <TableHead className="min-w-[100px]">Category</TableHead>
-                <TableHead className="min-w-[150px]">Tags</TableHead>
-                <TableHead className="min-w-[100px]">Priority</TableHead>
-                <TableHead className="min-w-[120px]">Due Date</TableHead>
-                <TableHead className="min-w-[150px]">Recurrence</TableHead>
-                <TableHead className="min-w-[100px]">Status</TableHead>
-                <TableHead className="min-w-[120px]">Sub Tasks</TableHead>
-                <TableHead className="w-[100px]">Actions</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody className="dark:bg-secondary">
-              {filteredTasks.map((task) => (
-                <TableRow key={task.id}>
-                  <TableCell className="max-w-[200px]">
-                    <div>
-                      <div className="font-medium truncate">{task.title}</div>
-                      <div className="text-sm text-muted-foreground line-clamp-1">
-                        {task.description}
-                      </div>
-                    </div>
-                  </TableCell>
-                  <TableCell>
-                    <Badge
-                      variant="outline"
-                      className={cn(
-                        "capitalize",
-                        task.category.toLowerCase() === "work" &&
-                          "text-blue-500 bg-blue-500/10",
-                        task.category.toLowerCase() === "personal" &&
-                          "text-purple-500 bg-purple-500/10",
-                        task.category.toLowerCase() === "shopping" &&
-                          "text-green-500 bg-green-500/10",
-                        task.category.toLowerCase() === "health" &&
-                          "text-red-500 bg-red-500/10",
-                        task.category.toLowerCase() === "education" &&
-                          "text-yellow-500 bg-yellow-500/10",
-                        task.category.toLowerCase() === "finance" &&
-                          "text-orange-500 bg-orange-500/10"
-                      )}
-                    >
-                      {task.category}
-                    </Badge>
-                  </TableCell>
-                  <TableCell>
-                    <div className="flex flex-wrap gap-1 sm:gap-2">
-                      {task.tags.map((tag) => (
-                        <TagBadge key={tag.id} tag={tag} />
-                      ))}
-                    </div>
-                  </TableCell>
-                  <TableCell>
-                    <div className="flex flex-wrap items-center gap-2">
-                      <Badge
-                        variant="outline"
-                        className={cn(
-                          "capitalize",
-                          task.priority === "high" &&
-                            "text-red-500 bg-red-500/10",
-                          task.priority === "medium" &&
-                            "text-yellow-500 bg-yellow-500/10",
-                          task.priority === "low" &&
-                            "text-green-500 bg-green-500/10"
-                        )}
-                      >
-                        {task.priority}
-                      </Badge>
-                    </div>
-                  </TableCell>
-                  <TableCell>{format(task.dueDate, "MMM dd, yyyy")}</TableCell>
-                  <TableCell>
-                    {task.recurrence ? (
-                      <RecurringIndicator recurrence={task.recurrence} />
-                    ) : (
-                      <span className="text-xs text-muted-foreground">
-                        none
-                      </span>
-                    )}
-                  </TableCell>
-                  <TableCell>
-                    <TaskStatusDropdown
-                      status={task.status}
-                      onStatusChange={(newStatus) => {
-                        handleStatusChange(task.id, newStatus);
-                      }}
-                    />
-                  </TableCell>
-                  <TableCell>
-                    {task.subtasks && (
-                      <div className="flex items-center gap-1">
-                        <ListChecks className="h-4 w-4 text-muted-foreground" />
-                        <span className="text-sm text-muted-foreground">
-                          {task.subtasks.filter((st) => st.completed).length}/
-                          {task.subtasks.length}
-                        </span>
-                      </div>
-                    )}
-                  </TableCell>
-                  <TableCell>
-                    <TaskActions
-                      task={task}
-                      customCategories={customCategories}
-                      setCustomCategories={setCustomCategories}
-                      setTasks={setTasks}
-                    />
-                  </TableCell>
-                </TableRow>
-              ))}
-            </TableBody>
-          </Table>
-        </div>
-      ) : (
-        <NoTasksFound
-          onClearFilters={() =>
-            handleClearFilters({
-              setSearchQuery,
-              setSelectedFilterTags,
-              setPriorityFilter,
-              setStatusFilter,
-            })
-          }
-        />
-      )}
-    </>
-  );
-
-  const TaskCard = ({
-    task,
-    children,
-  }: {
-    task: Task;
-    children?: React.ReactNode;
-  }) => {
+  const TaskCard = ({ task }: { task: Task; children?: React.ReactNode }) => {
     const priorityColor =
       priorityColors[task.priority as keyof typeof priorityColors];
     const completedSubtasks =
       task.subtasks?.filter((st) => st.completed).length || 0;
     const totalSubtasks = task.subtasks?.length || 0;
     const isMobile = useIsMobile();
+    const updateSubtaskStatus = useMutation(api.tasks.updateSubtaskStatus);
+
+    const wrappedUpdateSubtaskStatus = async (params: {
+      taskId: Id<"tasks">;
+      subtaskId: string;
+      completed: boolean;
+    }) => {
+      await updateSubtaskStatus(params);
+    };
 
     return (
       <>
-        <Card className="cursor-pointer">
+        <Card
+          className="cursor-pointer"
+          style={{ borderLeftColor: priorityColor.borderColor }}
+        >
           <CardHeader
-            className="p-3 sm:p-4"
+            className="p-4 space-y-3"
             onClick={(e) => {
-              if (!(e.target as HTMLElement).closest(".task-actions")) {
+              const target = e.target as HTMLElement;
+              const isInteractive = target.closest(
+                "button, [role='checkbox'], [role='combobox'], .task-actions"
+              );
+              if (!isInteractive) {
                 setSelectedTask(task);
                 setIsTaskSheetOpen(true);
               }
             }}
           >
-            <div className="flex flex-col gap-4 xl:gap-2">
-              <div className="flex items-start justify-between flex-col xl:flex-row gap-1 sm:gap-2">
-                <div className="flex-1 min-w-0">
-                  <CardTitle className="text-sm sm:text-base line-clamp-1">
-                    {task.title}
-                  </CardTitle>
-                  <CardDescription className="my-2 xl:my-1 text-xs sm:text-sm line-clamp-2">
-                    {task.description}
-                  </CardDescription>
-                  {task.recurrence && (
-                    <div className="mt-1 sm:mt-2">
-                      <RecurringIndicator recurrence={task.recurrence} />
-                    </div>
-                  )}
-                </div>
-                <div className="flex items-center gap-1 sm:gap-2 xl:ml-2 task-actions">
-                  <TaskStatusDropdown
-                    status={task.status}
-                    onStatusChange={(newStatus) =>
-                      handleStatusChange(task.id, newStatus)
-                    }
-                  />
-                  <TaskActions
-                    task={task}
-                    customCategories={customCategories}
-                    setCustomCategories={setCustomCategories}
-                    setTasks={setTasks}
-                  />
-                </div>
+            <div className="flex items-start justify-between gap-2">
+              <div className="flex-1 min-w-0">
+                <CardTitle className="text-base font-semibold line-clamp-1">
+                  {task.title}
+                </CardTitle>
               </div>
-              <div className="flex flex-wrap items-center gap-1 sm:gap-2">
+              <div className="flex items-center gap-2 task-actions">
+                <TaskStatusDropdown
+                  status={task.status}
+                  onStatusChange={(newStatus) =>
+                    handleStatusChange(task.id as Id<"tasks">, newStatus)
+                  }
+                />
+                <TaskActions
+                  task={task}
+                  customCategories={customCategories}
+                  setCustomCategories={setCustomCategories}
+                  selectedTask={selectedTask}
+                  setSelectedTask={setSelectedTask}
+                />
+              </div>
+            </div>
+            {task.description && (
+              <div className="text-sm text-muted-foreground">
+                <p className="line-clamp-3">{task.description}</p>
+              </div>
+            )}
+            {task.subtasks && task.subtasks.length > 0 && (
+              <div className="space-y-2">
+                <div className="flex items-center justify-between text-xs text-muted-foreground">
+                  <span>
+                    Progress ({completedSubtasks}/{totalSubtasks})
+                  </span>
+                  <span>
+                    {Math.round((completedSubtasks / totalSubtasks) * 100)}%
+                  </span>
+                </div>
+                <Progress
+                  value={(completedSubtasks / totalSubtasks) * 100}
+                  className="h-1.5"
+                />
+              </div>
+            )}
+          </CardHeader>
+          <CardContent
+            className="px-4 pb-4 pt-0"
+            onClick={(e) => {
+              const target = e.target as HTMLElement;
+              const isInteractive = target.closest(
+                "button, [role='checkbox'], [role='combobox'], .task-actions"
+              );
+              if (!isInteractive) {
+                setSelectedTask(task);
+                setIsTaskSheetOpen(true);
+              }
+            }}
+          >
+            <div className="flex flex-wrap items-center gap-2">
+              <Badge
+                variant="outline"
+                className={cn(
+                  "capitalize",
+                  priorityColor.text,
+                  priorityColor.bg
+                )}
+              >
+                {task.priority}
+              </Badge>
+              {task.category && (
                 <Badge
                   variant="outline"
                   className={cn(
                     "capitalize",
-                    task.category.toLowerCase() === "work" &&
-                      "text-blue-500 bg-blue-500/10",
-                    task.category.toLowerCase() === "personal" &&
-                      "text-purple-500 bg-purple-500/10",
-                    task.category.toLowerCase() === "shopping" &&
-                      "text-green-500 bg-green-500/10",
-                    task.category.toLowerCase() === "health" &&
-                      "text-red-500 bg-red-500/10",
-                    task.category.toLowerCase() === "education" &&
-                      "text-yellow-500 bg-yellow-500/10",
-                    task.category.toLowerCase() === "finance" &&
-                      "text-orange-500 bg-orange-500/10"
+                    customCategories.find(
+                      (c) =>
+                        c.name.toLowerCase() === task.category.toLowerCase()
+                    )
+                      ? `text-${customCategories.find((c) => c.name.toLowerCase() === task.category.toLowerCase())?.color}-500 bg-${customCategories.find((c) => c.name.toLowerCase() === task.category.toLowerCase())?.color}-500/10`
+                      : cn(
+                          task.category.toLowerCase() === "work" &&
+                            "text-blue-500 bg-blue-500/10",
+                          task.category.toLowerCase() === "personal" &&
+                            "text-purple-500 bg-purple-500/10",
+                          task.category.toLowerCase() === "shopping" &&
+                            "text-green-500 bg-green-500/10",
+                          task.category.toLowerCase() === "health" &&
+                            "text-red-500 bg-red-500/10",
+                          task.category.toLowerCase() === "education" &&
+                            "text-yellow-500 bg-yellow-500/10",
+                          task.category.toLowerCase() === "finance" &&
+                            "text-orange-500 bg-orange-500/10"
+                        )
                   )}
                 >
                   {task.category}
                 </Badge>
+              )}
+              {task.tags.slice(0, 2).map((tag: Tag) => (
+                <TagBadge key={tag.id} tag={tag} />
+              ))}
+              {task.tags.length > 2 && (
                 <Badge
-                  variant="outline"
-                  className={cn(
-                    "capitalize",
-                    priorityColor.text,
-                    priorityColor.bg
-                  )}
+                  variant="secondary"
+                  className="text-xs cursor-default dark:bg-muted/50"
                 >
-                  {task.priority}
+                  +{task.tags.length - 2}
                 </Badge>
-                {task.tags.map((tag: Tag) => (
-                  <TagBadge key={tag.id} tag={tag} />
-                ))}
-              </div>
+              )}
             </div>
-          </CardHeader>
-          <CardContent className="p-3 pt-0 sm:p-4 sm:pt-0">
-            <div className="flex flex-wrap items-center gap-x-3 sm:gap-x-4 gap-y-1 sm:gap-y-2 text-xs sm:text-sm text-muted-foreground">
-              <div className="flex items-center gap-1">
-                <Calendar className="h-3 w-3 sm:h-4 sm:w-4" />
-                {format(task.dueDate, "MMM dd")}
+            <div className="flex flex-wrap items-center gap-2 mt-2 pt-1">
+              <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
+                <Calendar className="h-3.5 w-3.5" />
+                {format(task.dueDate, "dd MMM, hh:mm a")}
               </div>
-              <div className="flex items-center gap-1">
-                <ListChecks className="h-3 w-3 sm:h-4 sm:w-4" />
-                {completedSubtasks}/{totalSubtasks}
-              </div>
+              {task.recurrence && (
+                <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
+                  <RecurringIndicator recurrence={task.recurrence} />
+                </div>
+              )}
+              {task.subtasks.length > 0 && (
+                <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
+                  <ListChecks className="h-3.5 w-3.5" />
+                  {task.subtasks.filter((st) => st.completed).length}/
+                  {task.subtasks.length}
+                </div>
+              )}
             </div>
           </CardContent>
         </Card>
-
-        {/* Task Details Sheet */}
         <Sheet open={isTaskSheetOpen} onOpenChange={setIsTaskSheetOpen}>
           <SheetContent
             side="right"
             className={cn(
-              "overflow-y-auto sheet border-none",
+              "overflow-y-auto sheet border-none p-4 pl-6 pt-7",
               isMobile ? "w-full max-w-none" : "w-[500px] max-w-[500px]"
             )}
           >
-            <SheetHeader>
-              <SheetTitle className="text-xl font-semibold">
-                {selectedTask?.title}
-              </SheetTitle>
-            </SheetHeader>
-
-            <div className="mt-6 space-y-6">
-              {/* Description */}
-              <div className="space-y-2">
-                <h3 className="text-sm font-medium">Description</h3>
-                <p className="text-sm text-muted-foreground whitespace-pre-line">
-                  {selectedTask?.description}
-                </p>
+            <SheetHeader className="space-y-4">
+              <div className="flex items-center justify-between pt-5">
+                <SheetTitle className="text-xl font-semibold line-clamp-1">
+                  {selectedTask?.title}
+                </SheetTitle>
+                <TaskActions
+                  task={selectedTask!}
+                  customCategories={customCategories}
+                  setCustomCategories={setCustomCategories}
+                  selectedTask={selectedTask}
+                  setSelectedTask={setSelectedTask}
+                />
               </div>
-
-              {/* Status */}
+              {selectedTask?.subtasks && selectedTask.subtasks.length > 0 && (
+                <div className="flex items-center gap-3 text-sm text-muted-foreground">
+                  <div className="flex items-center gap-1.5">
+                    <ListChecks className="h-4 w-4" />
+                    <span>Subtasks :</span>
+                  </div>
+                  <div>
+                    {selectedTask.subtasks.filter((st) => st.completed).length}/
+                    {selectedTask.subtasks.length}
+                  </div>
+                </div>
+              )}
+            </SheetHeader>
+            <div className="mt-6 space-y-6">
               <div className="space-y-2">
-                <h3 className="text-sm font-medium">Status</h3>
-                <div className="flex items-center gap-2">
+                <div className="flex items-center justify-between">
+                  <h3 className="text-sm font-medium">Status</h3>
                   {selectedTask && (
                     <TaskStatusDropdown
                       status={selectedTask.status}
                       onStatusChange={(newStatus) =>
-                        handleStatusChange(selectedTask.id, newStatus)
+                        handleStatusChange(
+                          selectedTask.id as Id<"tasks">,
+                          newStatus
+                        )
                       }
                     />
                   )}
                 </div>
               </div>
-
-              {/* Priority & Category */}
-              <div className="space-y-2">
-                <h3 className="text-sm font-medium">Details</h3>
-                <div className="flex flex-wrap gap-2">
-                  <Badge
-                    variant="outline"
-                    className={cn(
-                      "capitalize",
-                      selectedTask &&
-                        priorityColors[
-                          selectedTask.priority as keyof typeof priorityColors
-                        ].text,
-                      selectedTask &&
-                        priorityColors[
-                          selectedTask.priority as keyof typeof priorityColors
-                        ].bg
-                    )}
-                  >
-                    {selectedTask?.priority}
-                  </Badge>
-                  <Badge variant="outline" className="capitalize">
-                    {selectedTask?.category}
-                  </Badge>
-                </div>
-              </div>
-
-              {/* Due Date */}
-              <div className="space-y-2">
-                <h3 className="text-sm font-medium">Due Date</h3>
-                <div className="text-sm text-muted-foreground flex items-center gap-1.5">
-                  <Calendar className="h-4 w-4" />
-                  {selectedTask?.dueDate.toLocaleDateString()}
-                </div>
-              </div>
-
-              {/* Subtasks */}
-              {selectedTask?.subtasks && selectedTask.subtasks.length > 0 && (
+              {selectedTask?.description && (
                 <div className="space-y-2">
-                  <h3 className="text-sm font-medium">Subtasks</h3>
-                  <div className="space-y-2">
-                    {selectedTask.subtasks.map((subtask) => (
-                      <div key={subtask.id} className="flex items-center gap-2">
-                        <Checkbox
-                          checked={subtask.completed}
-                          onCheckedChange={() => {
-                            // Add your subtask toggle logic here
-                          }}
-                        />
-                        <span className="text-sm">{subtask.title}</span>
-                      </div>
-                    ))}
+                  <h3 className="text-sm font-medium">Description</h3>
+                  <div className="rounded-lg bg-muted/50 p-3">
+                    <p className="text-sm text-muted-foreground whitespace-pre-line">
+                      {selectedTask.description}
+                    </p>
                   </div>
                 </div>
               )}
-
-              {/* Actions */}
-              <div className="flex gap-2 mt-6">
-                <Button
-                  variant="outline"
-                  className="flex-1"
-                  onClick={() => {
-                    // Add your edit logic here
-                    setIsTaskSheetOpen(false);
-                  }}
-                >
-                  <Pencil className="h-4 w-4" />
-                  Edit
-                </Button>
-                <Button
-                  variant="destructive"
-                  className="flex-1"
-                  onClick={() => {
-                    // Add your delete logic here
-                    setIsTaskSheetOpen(false);
-                  }}
-                >
-                  <Trash2 className="h-4 w-4" />
-                  Delete
-                </Button>
+              {selectedTask?.subtasks && selectedTask.subtasks.length > 0 && (
+                <div className="space-y-2">
+                  <h3 className="text-sm font-medium">Subtasks</h3>
+                  <div className="rounded-lg bg-muted/50 p-3">
+                    <div className="space-y-2">
+                      {selectedTask.subtasks.map((subtask, index) => (
+                        <div
+                          key={subtask.id}
+                          className="flex items-center gap-2 text-sm"
+                        >
+                          <Checkbox
+                            id={`subtask-${index}`}
+                            checked={subtask.completed}
+                            onCheckedChange={(checked) => {
+                              handleSubtaskToggle(
+                                selectedTask.id as Id<"tasks">,
+                                subtask.id.toString(),
+                                checked as boolean,
+                                wrappedUpdateSubtaskStatus,
+                                selectedTask,
+                                setSelectedTask
+                              );
+                            }}
+                          />
+                          <label
+                            htmlFor={`subtask-${index}`}
+                            className={cn(
+                              "flex-1 cursor-pointer",
+                              subtask.completed &&
+                                "line-through text-muted-foreground"
+                            )}
+                          >
+                            {subtask.title}
+                          </label>
+                          <div className="flex items-center gap-1">
+                            <Button
+                              variant="outline"
+                              className="h-7 w-7"
+                              disabled={
+                                isEditingSubtaskId === subtask.id.toString()
+                              }
+                              onClick={() =>
+                                setEditingSubtask({
+                                  id: subtask.id.toString(),
+                                  title: subtask.title,
+                                })
+                              }
+                            >
+                              {isEditingSubtaskId === subtask.id.toString() ? (
+                                <Loader2 className="h-3 w-3 animate-spin" />
+                              ) : (
+                                <Pencil className="h-3 w-3" />
+                              )}
+                            </Button>
+                            <Button
+                              variant="outline"
+                              className="h-7 w-7"
+                              disabled={
+                                isDeletingSubtaskId === subtask.id.toString()
+                              }
+                              onClick={() =>
+                                setDeletingSubtask({
+                                  id: subtask.id.toString(),
+                                  title: subtask.title,
+                                })
+                              }
+                            >
+                              {isDeletingSubtaskId === subtask.id.toString() ? (
+                                <Loader2 className="h-3 w-3 animate-spin" />
+                              ) : (
+                                <Trash2 className="h-3 w-3" />
+                              )}
+                            </Button>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                    <div className="mt-4 space-y-1.5">
+                      <div className="flex items-center justify-between text-xs text-muted-foreground">
+                        <span>Progress</span>
+                        <span>
+                          {
+                            selectedTask.subtasks.filter((st) => st.completed)
+                              .length
+                          }
+                          /{selectedTask.subtasks.length}
+                        </span>
+                      </div>
+                      <Progress
+                        value={
+                          (selectedTask.subtasks.filter((st) => st.completed)
+                            .length /
+                            selectedTask.subtasks.length) *
+                          100
+                        }
+                        className="h-2"
+                      />
+                    </div>
+                  </div>
+                </div>
+              )}
+              <EditSubtaskDialog
+                isOpen={!!editingSubtask}
+                onOpenChange={(open) => !open && setEditingSubtask(null)}
+                subtaskTitle={editingSubtask?.title ?? ""}
+                onSave={async (newTitle) => {
+                  try {
+                    await handleUpdateSubtask(
+                      selectedTask!.id as Id<"tasks">,
+                      editingSubtask!.id,
+                      newTitle
+                    );
+                    setEditingSubtask(null);
+                  } catch (error) {
+                    throw error;
+                  }
+                }}
+                isLoading={isEditingSubtaskId === editingSubtask?.id}
+              />
+              <DeleteTaskDialog
+                isOpen={!!deletingSubtask}
+                onOpenChange={(open) => !open && setDeletingSubtask(null)}
+                taskTitle={deletingSubtask?.title ?? ""}
+                onDelete={async () => {
+                  await handleDeleteSubtask(
+                    selectedTask!.id as Id<"tasks">,
+                    deletingSubtask!.id
+                  );
+                }}
+                isDeleting={isDeletingSubtaskId === deletingSubtask?.id}
+              />
+              <div className="space-y-2">
+                <h3 className="text-sm font-medium">Details</h3>
+                <div className="rounded-lg bg-muted/50 p-3 space-y-3">
+                  <div className="space-y-1">
+                    <div className="text-xs text-muted-foreground">
+                      Priority
+                    </div>
+                    <div className="flex flex-wrap items-center gap-2">
+                      {selectedTask && (
+                        <Badge
+                          variant="outline"
+                          className={cn(
+                            "capitalize",
+                            priorityColors[
+                              selectedTask.priority as keyof typeof priorityColors
+                            ].text,
+                            priorityColors[
+                              selectedTask.priority as keyof typeof priorityColors
+                            ].bg
+                          )}
+                        >
+                          {selectedTask.priority}
+                        </Badge>
+                      )}
+                    </div>
+                  </div>
+                  <div className="space-y-1">
+                    <div className="text-xs text-muted-foreground">
+                      Category
+                    </div>
+                    <div className="flex flex-wrap items-center gap-2">
+                      {selectedTask && (
+                        <Badge
+                          variant="outline"
+                          className={cn(
+                            "capitalize",
+                            selectedTask.category.toLowerCase() === "work" &&
+                              "text-blue-500 bg-blue-500/10",
+                            selectedTask.category.toLowerCase() ===
+                              "personal" && "text-purple-500 bg-purple-500/10",
+                            selectedTask.category.toLowerCase() ===
+                              "shopping" && "text-green-500 bg-green-500/10",
+                            selectedTask.category.toLowerCase() === "health" &&
+                              "text-red-500 bg-red-500/10",
+                            selectedTask.category.toLowerCase() ===
+                              "education" && "text-yellow-500 bg-yellow-500/10",
+                            selectedTask.category.toLowerCase() === "finance" &&
+                              "text-orange-500 bg-orange-500/10"
+                          )}
+                        >
+                          {selectedTask.category}
+                        </Badge>
+                      )}
+                    </div>
+                  </div>
+                  {selectedTask?.tags && selectedTask.tags.length > 0 && (
+                    <div className="space-y-1">
+                      <div className="text-xs text-muted-foreground">Tags</div>
+                      <div className="flex flex-wrap gap-1.5">
+                        {selectedTask.tags.map((tag: Tag) => (
+                          <TagBadge key={tag.id} tag={tag} />
+                        ))}
+                      </div>
+                    </div>
+                  )}
+                </div>
+              </div>
+              {selectedTask?.recurrence && (
+                <div className="space-y-2">
+                  <h3 className="text-sm font-medium mr-3">Recurrence</h3>
+                  <div className="rounded-lg bg-muted/50 p-3">
+                    <RecurringIndicator recurrence={selectedTask.recurrence} />
+                  </div>
+                </div>
+              )}
+              <div className="pt-4 border-t space-y-2">
+                <div className="flex items-center justify-between text-xs text-muted-foreground">
+                  <div className="flex items-center gap-1">
+                    <Clock className="h-3 w-3" />
+                    Created:{" "}
+                    {selectedTask?.createdAt
+                      ? format(
+                          new Date(selectedTask.createdAt),
+                          "dd MMM, yyyy, hh:mm aa"
+                        )
+                      : "Not available"}
+                  </div>
+                  {selectedTask?.updatedAt && (
+                    <div className="flex items-center gap-1">
+                      <RefreshCw className="h-3 w-3" />
+                      Updated:{" "}
+                      {format(
+                        new Date(selectedTask.updatedAt),
+                        "dd MMM, yyyy, hh:mm aa"
+                      )}
+                    </div>
+                  )}
+                </div>
               </div>
             </div>
           </SheetContent>
@@ -1419,45 +1480,67 @@ export default function Tasks() {
       </TaskCard>
     );
 
-    return (
-      <>
-        {filteredTasks.length > 0 ? (
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-2 xl:grid-cols-3 gap-4">
-            <div className="space-y-4">
-              <div className="flex items-center justify-between">
-                <h3 className="font-semibold">Not Started</h3>
-                <Badge variant="outline">{notStartedTasks.length}</Badge>
-              </div>
-              <div className="space-y-3">{notStartedTasks.map(renderTask)}</div>
-            </div>
-            <div className="space-y-4">
-              <div className="flex items-center justify-between">
-                <h3 className="font-semibold">In Progress</h3>
-                <Badge variant="outline">{inProgressTasks.length}</Badge>
-              </div>
-              <div className="space-y-3">{inProgressTasks.map(renderTask)}</div>
-            </div>
-            <div className="space-y-4">
-              <div className="flex items-center justify-between">
-                <h3 className="font-semibold">Completed</h3>
-                <Badge variant="outline">{completedTasks.length}</Badge>
-              </div>
-              <div className="space-y-3">{completedTasks.map(renderTask)}</div>
-            </div>
+    if (filteredTasks.length === 0) {
+      return (
+        <div className="flex flex-col items-center justify-center p-8 text-center">
+          <div className="p-5 mb-3 bg-secondary rounded-full flex items-center justify-center">
+            {searchQuery ||
+            priorityFilter !== "all" ||
+            statusFilter !== "all" ? (
+              <Search className="size-12 text-muted-foreground" />
+            ) : (
+              <ClipboardX className="size-12 text-muted-foreground" />
+            )}
           </div>
-        ) : (
-          <NoTasksFound
-            onClearFilters={() =>
-              handleClearFilters({
-                setSearchQuery,
-                setSelectedFilterTags,
-                setPriorityFilter,
-                setStatusFilter,
-              })
-            }
-          />
-        )}
-      </>
+          <h3 className="font-semibold text-lg mb-2">No tasks found</h3>
+          <p className="text-muted-foreground text-sm max-w-lg">
+            {searchQuery || priorityFilter !== "all" || statusFilter !== "all"
+              ? "Try adjusting your search or filters to find what you're looking for."
+              : "Get started by creating your first task using the 'New Task' button above."}
+          </p>
+        </div>
+      );
+    }
+
+    return (
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-2 xl:grid-cols-3 gap-4 mt-5">
+        <div className="space-y-4 bg-secondary dark:bg-muted/60 p-5 rounded-xl h-fit">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-2">
+              <div className="h-2 w-2 rounded-full bg-slate-400" />
+              <h3 className="font-semibold">Not Started</h3>
+            </div>
+            <Badge className="bg-gray-500/80 text-white">
+              {notStartedTasks.length}
+            </Badge>
+          </div>
+          <div className="space-y-3">{notStartedTasks.map(renderTask)}</div>
+        </div>
+        <div className="space-y-4 bg-secondary dark:bg-muted/60 p-5 rounded-xl h-fit">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-2">
+              <div className="h-2 w-2 rounded-full bg-blue-400" />
+              <h3 className="font-semibold">In Progress</h3>
+            </div>
+            <Badge className="bg-blue-500/80 text-white">
+              {inProgressTasks.length}
+            </Badge>
+          </div>
+          <div className="space-y-3">{inProgressTasks.map(renderTask)}</div>
+        </div>
+        <div className="space-y-4 bg-secondary dark:bg-muted/60 p-5 rounded-xl h-fit">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-2">
+              <div className="h-2 w-2 rounded-full bg-green-400" />
+              <h3 className="font-semibold">Completed</h3>
+            </div>
+            <Badge className="bg-green-500/80 text-white">
+              {completedTasks.length}
+            </Badge>
+          </div>
+          <div className="space-y-3">{completedTasks.map(renderTask)}</div>
+        </div>
+      </div>
     );
   };
 
@@ -1483,75 +1566,91 @@ export default function Tasks() {
           ))}
         </div>
       ) : (
-        <NoTasksFound
-          onClearFilters={() =>
-            handleClearFilters({
-              setSearchQuery,
-              setSelectedFilterTags,
-              setPriorityFilter,
-              setStatusFilter,
-            })
-          }
-        />
+        <div className="flex flex-col items-center justify-center p-8 text-center">
+          <div className="p-5 mb-3 bg-secondary rounded-full flex items-center justify-center">
+            {searchQuery ? (
+              <Search className="size-12 text-muted-foreground" />
+            ) : (
+              <ClipboardX className="size-12 text-muted-foreground" />
+            )}
+          </div>
+          <h3 className="font-semibold text-lg mb-2">No tasks found</h3>
+          <p className="text-muted-foreground text-sm max-w-lg">
+            {searchQuery
+              ? "Try adjusting your search or filters to find what you're looking for."
+              : "Get started by creating your first task using the 'New Task' button above."}
+          </p>
+        </div>
       )}
     </>
   );
 
-  const createRecurringTasks = (task: Task) => {
-    if (!task.recurrence) return [task];
+  const createTask = useMutation(api.tasks.createTask);
 
-    const tasks: Task[] = [];
-    let currentDate = task.dueDate;
-    let count = 0;
+  const handleCreateTask = async () => {
+    const toastId = toast.loading("Creating task...");
+    setIsCreating(true);
 
-    while (true) {
-      tasks.push({
-        ...task,
-        id: (Date.now() + count).toString(),
-        dueDate: currentDate,
+    try {
+      await createTask({
+        title: newTask.title,
+        description: newTask.description || "",
+        priority: newTask.priority,
+        category: newTask.category,
+        dueDate: newTask.dueDate.toISOString(),
+        status: "not_started",
+        tags: newTask.tags,
+        subtasks: newTask.subtasks.map((subtask) => ({
+          id: subtask.id,
+          title: subtask.title,
+          completed: false,
+        })),
+        recurrence: newTask.recurrence
+          ? {
+              frequency: newTask.recurrence.frequency,
+              interval: newTask.recurrence.interval,
+              endDate: newTask.recurrence.endDate?.toISOString(),
+              occurrences: newTask.recurrence.occurrences ?? undefined,
+              daysOfWeek: newTask.recurrence.daysOfWeek,
+              dayOfMonth: newTask.recurrence.dayOfMonth,
+            }
+          : undefined,
       });
 
-      count++;
+      toast.success("Task created successfully", {
+        id: toastId,
+        description: `"${newTask.title}" has been created.`,
+      });
 
-      if (task.recurrence.occurrences && count >= task.recurrence.occurrences) {
-        break;
-      }
-      if (task.recurrence.endDate && currentDate >= task.recurrence.endDate) {
-        break;
-      }
+      setNewTask({
+        id: "",
+        title: "",
+        description: "",
+        priority: "medium",
+        category: categories[0].toLowerCase(),
+        dueDate: new Date(),
+        status: "not_started",
+        tags: [],
+        subtasks: [],
+        recurrence: null,
+        createdAt: new Date().toISOString(),
+      });
 
-      switch (task.recurrence.frequency) {
-        case "daily":
-          currentDate = addDays(currentDate, task.recurrence.interval);
-          break;
-        case "weekly":
-          currentDate = addWeeks(currentDate, task.recurrence.interval);
-          break;
-        case "monthly":
-          currentDate = addMonths(currentDate, task.recurrence.interval);
-          break;
-      }
+      setIsNewTaskDialogOpen(false);
+    } catch (error) {
+      console.error("Failed to create task:", error);
+      toast.error("Failed to create task", {
+        id: toastId,
+        description: "Please try again later.",
+      });
+    } finally {
+      setIsCreating(false);
     }
-
-    return tasks;
-  };
-
-  const handleCreateTask = () => {
-    const newTasks = createRecurringTasks({
-      ...newTask,
-      id: Date.now().toString(),
-      status: "not_started",
-      subtasks: [],
-    });
-    setTasks([...tasks, ...newTasks]);
   };
 
   useEffect(() => {
     const savedView = localStorage.getItem("tasksView");
-    if (
-      savedView &&
-      (savedView === "board" || savedView === "cards" || savedView === "table")
-    ) {
+    if (savedView && (savedView === "board" || savedView === "cards")) {
       setView(savedView as ViewType);
     }
     setMounted(true);
@@ -1563,10 +1662,10 @@ export default function Tasks() {
     }
   }, [view, mounted]);
 
-  if (!mounted) {
+  if (isLoading) {
     return (
       <div className="h-full flex items-center justify-center">
-        <Loader2 className="animate-spin 2-8 h-8" />
+        <Loader2 className="animate-spin h-8 w-8" />
       </div>
     );
   }
@@ -1621,277 +1720,6 @@ export default function Tasks() {
         </div>
         <div className="flex lg:hidden items-center justify-between gap-2 w-full">
           <ViewToggle />
-          <Dialog>
-            <DialogTrigger asChild>
-              <Button variant="outline" className="dark:bg-muted/50">
-                <Plus className="h-4 w-4" />
-                New Task
-              </Button>
-            </DialogTrigger>
-            <DialogContent className="sm:max-w-[625px] max-h-[80vh] sm:max-h-[90vh] overflow-y-auto">
-              <DialogHeader>
-                <DialogTitle>Create New Task</DialogTitle>
-              </DialogHeader>
-              <div className="grid gap-4 py-4">
-                <div className="grid gap-2">
-                  <Label htmlFor="task-name">Task Name</Label>
-                  <Input id="task-name" placeholder="Enter task name" />
-                </div>
-                <div className="grid gap-2">
-                  <Label htmlFor="description">Description</Label>
-                  <Textarea
-                    id="description"
-                    placeholder="Enter task description"
-                  />
-                </div>
-                <div className="grid grid-cols-2 items-start gap-4">
-                  <div className="grid gap-2">
-                    <Label>Priority</Label>
-                    <Select>
-                      <SelectTrigger>
-                        <SelectValue placeholder="Select priority" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        {priorities.map((priority) => (
-                          <SelectItem
-                            key={priority.value}
-                            value={priority.value}
-                            className={priority.color}
-                          >
-                            {priority.label}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                  </div>
-                  <div className="grid gap-2">
-                    <Label>Category</Label>
-                    {!isAddingCustomCategory ? (
-                      <Select
-                        value={newTask.category}
-                        onValueChange={(value) => {
-                          if (value === "custom") {
-                            setIsAddingCustomCategory(true);
-                          } else {
-                            setNewTask({ ...newTask, category: value });
-                          }
-                        }}
-                      >
-                        <SelectTrigger>
-                          <SelectValue placeholder="Select category" />
-                        </SelectTrigger>
-                        <SelectContent>
-                          {categories.map((category) => (
-                            <SelectItem
-                              key={category}
-                              value={category.toLowerCase()}
-                            >
-                              {category}
-                            </SelectItem>
-                          ))}
-                          {customCategories.map((category) => (
-                            <SelectItem
-                              key={category.name}
-                              value={category.name.toLowerCase()}
-                            >
-                              {category.name}
-                            </SelectItem>
-                          ))}
-                          <SelectSeparator />
-                          <SelectItem value="custom">
-                            + Add Custom Category
-                          </SelectItem>
-                        </SelectContent>
-                      </Select>
-                    ) : (
-                      <div className="space-y-4">
-                        <div className="flex flex-col sm:flex-row gap-2">
-                          <div className="flex-1 space-y-2">
-                            <Input
-                              placeholder="Enter category name"
-                              value={newCustomCategory.name}
-                              onChange={(e) =>
-                                setNewCustomCategory({
-                                  ...newCustomCategory,
-                                  name: e.target.value,
-                                })
-                              }
-                            />
-                          </div>
-                          <Select
-                            value={newCustomCategory.color}
-                            onValueChange={(value) =>
-                              setNewCustomCategory({
-                                ...newCustomCategory,
-                                color:
-                                  value as (typeof categoryColors)[number]["value"],
-                              })
-                            }
-                          >
-                            <SelectTrigger className="w-full sm:w-[100px]">
-                              <SelectValue />
-                            </SelectTrigger>
-                            <SelectContent>
-                              {categoryColors.map((color) => (
-                                <SelectItem
-                                  key={color.value}
-                                  value={color.value}
-                                  className="bg-transparent"
-                                >
-                                  <div className="flex items-center gap-2">
-                                    <div
-                                      className={cn(
-                                        "w-2 h-2 rounded-full",
-                                        color.value
-                                      )}
-                                    />
-                                    {color.label}
-                                  </div>
-                                </SelectItem>
-                              ))}
-                            </SelectContent>
-                          </Select>
-                        </div>
-                        <div className="flex flex-col sm:flex-row gap-2">
-                          <Button
-                            variant="outline"
-                            className="w-full sm:w-auto order-2 sm:order-1"
-                            onClick={() => {
-                              setIsAddingCustomCategory(false);
-                              setNewCustomCategory({
-                                name: "",
-                                color: categoryColors[0].value,
-                              });
-                            }}
-                          >
-                            Cancel
-                          </Button>
-                          <Button
-                            className="w-full sm:w-auto order-1 sm:order-2"
-                            disabled={newCustomCategory.name.length < 3}
-                            onClick={() => {
-                              const newCategory = {
-                                name: newCustomCategory.name,
-                                color: newCustomCategory.color,
-                              };
-                              setCustomCategories([
-                                ...customCategories,
-                                newCategory,
-                              ]);
-                              setNewTask({
-                                ...newTask,
-                                category: newCustomCategory.name.toLowerCase(),
-                              });
-                              setIsAddingCustomCategory(false);
-                              setNewCustomCategory({
-                                name: "",
-                                color: categoryColors[0].value,
-                              });
-                            }}
-                          >
-                            Add Category
-                          </Button>
-                        </div>
-                      </div>
-                    )}
-                  </div>
-                </div>
-                <div className="grid gap-2">
-                  <Label>Due Date</Label>
-                  <Dialog>
-                    <DialogTrigger asChild>
-                      <Button
-                        variant="outline"
-                        className={cn(
-                          "w-full justify-start text-left font-normal",
-                          !date && "text-muted-foreground"
-                        )}
-                      >
-                        <Calendar className="mr-2 h-4 w-4" />
-                        {date ? format(date, "PPP") : "Pick a date"}
-                      </Button>
-                    </DialogTrigger>
-                    <DialogContent className="sm:max-w-[300px] p-0">
-                      <DialogHeader className="px-4 pt-4">
-                        <DialogTitle>Select Date</DialogTitle>
-                      </DialogHeader>
-                      <div className="flex items-center justify-center p-4 pt-0">
-                        <CalendarComponent
-                          mode="single"
-                          selected={date}
-                          onSelect={(newDate) => {
-                            setDate(newDate);
-                            setNewTask({
-                              ...newTask,
-                              dueDate: newDate || new Date(),
-                            });
-                            const closeButton = document.querySelector(
-                              "[data-dialog-close]"
-                            );
-                            if (closeButton instanceof HTMLElement) {
-                              closeButton.click();
-                            }
-                          }}
-                          initialFocus
-                        />
-                      </div>
-                    </DialogContent>
-                  </Dialog>
-                </div>
-                <div className="grid gap-2">
-                  <Label>Subtasks</Label>
-                  <div className="space-y-2">
-                    <div className="flex items-center gap-2">
-                      <Input placeholder="Add subtask" />
-                      <Button size="icon" variant="outline">
-                        <Plus className="h-4 w-4" />
-                      </Button>
-                    </div>
-                  </div>
-                </div>
-                <div className="grid gap-2">
-                  <Label>Tags</Label>
-                  <div className="flex flex-wrap gap-2">
-                    {newTask.tags.map((tag) => (
-                      <TagBadge
-                        key={tag.id}
-                        tag={tag}
-                        onRemove={() => {
-                          setNewTask({
-                            ...newTask,
-                            tags: newTask.tags.filter((t) => t.id !== tag.id),
-                          });
-                        }}
-                      />
-                    ))}
-                  </div>
-                  <TagSelect
-                    selectedTags={newTask.tags}
-                    onTagSelect={(tag) => {
-                      setNewTask({
-                        ...newTask,
-                        tags: [...newTask.tags, tag],
-                      });
-                    }}
-                  />
-                </div>
-                <div className="grid gap-2">
-                  <RecurrenceSelector
-                    value={newTask.recurrence}
-                    onChange={(pattern) =>
-                      setNewTask({ ...newTask, recurrence: pattern })
-                    }
-                  />
-                </div>
-              </div>
-              <div className="flex justify-end gap-2">
-                <DialogClose asChild>
-                  <Button variant="destructive">Close</Button>
-                </DialogClose>
-                <Button onClick={handleCreateTask}>Create Task</Button>
-              </div>
-            </DialogContent>
-          </Dialog>
         </div>
       </div>
       <div className="block lg:hidden">
@@ -1903,11 +1731,7 @@ export default function Tasks() {
             <SelectContent>
               <SelectItem value="all">All Priorities</SelectItem>
               {priorities.map((priority) => (
-                <SelectItem
-                  key={priority.value}
-                  value={priority.value}
-                  className={priority.color}
-                >
+                <SelectItem key={priority.value} value={priority.value}>
                   {priority.label}
                 </SelectItem>
               ))}
@@ -1940,7 +1764,10 @@ export default function Tasks() {
         </div>
         <div className="flex items-center gap-2">
           <ViewToggle />
-          <Dialog>
+          <Dialog
+            open={isNewTaskDialogOpen}
+            onOpenChange={setIsNewTaskDialogOpen}
+          >
             <DialogTrigger asChild>
               <Button variant="outline" className="dark:bg-muted/50">
                 <Plus className="h-4 w-4" />
@@ -1954,19 +1781,35 @@ export default function Tasks() {
               <div className="grid gap-4 py-4">
                 <div className="grid gap-2">
                   <Label htmlFor="task-name">Task Name</Label>
-                  <Input id="task-name" placeholder="Enter task name" />
+                  <Input
+                    id="task-name"
+                    placeholder="Enter task name"
+                    value={newTask.title}
+                    onChange={(e) =>
+                      setNewTask({ ...newTask, title: e.target.value })
+                    }
+                  />
                 </div>
                 <div className="grid gap-2">
                   <Label htmlFor="description">Description</Label>
                   <Textarea
                     id="description"
                     placeholder="Enter task description"
+                    value={newTask.description}
+                    onChange={(e) =>
+                      setNewTask({ ...newTask, description: e.target.value })
+                    }
                   />
                 </div>
                 <div className="grid grid-cols-1 items-start gap-4">
                   <div className="grid gap-2">
                     <Label>Priority</Label>
-                    <Select>
+                    <Select
+                      value={newTask.priority}
+                      onValueChange={(value) =>
+                        setNewTask({ ...newTask, priority: value })
+                      }
+                    >
                       <SelectTrigger>
                         <SelectValue placeholder="Select priority" />
                       </SelectTrigger>
@@ -1975,7 +1818,6 @@ export default function Tasks() {
                           <SelectItem
                             key={priority.value}
                             value={priority.value}
-                            className={priority.color}
                           >
                             {priority.label}
                           </SelectItem>
@@ -1997,7 +1839,35 @@ export default function Tasks() {
                         }}
                       >
                         <SelectTrigger>
-                          <SelectValue placeholder="Select category" />
+                          <SelectValue>
+                            {newTask.category && (
+                              <div className="flex items-center gap-2">
+                                {categories
+                                  .map((c) => c.toLowerCase())
+                                  .includes(newTask.category) && (
+                                  <div
+                                    className={cn(
+                                      "w-3 h-3 rounded-full",
+                                      newTask.category.toLowerCase() ===
+                                        "work" && "bg-blue-500",
+                                      newTask.category.toLowerCase() ===
+                                        "personal" && "bg-purple-500",
+                                      newTask.category.toLowerCase() ===
+                                        "shopping" && "bg-green-500",
+                                      newTask.category.toLowerCase() ===
+                                        "health" && "bg-red-500",
+                                      newTask.category.toLowerCase() ===
+                                        "education" && "bg-yellow-500",
+                                      newTask.category.toLowerCase() ===
+                                        "finance" && "bg-orange-500"
+                                    )}
+                                  />
+                                )}
+                                {newTask.category.charAt(0).toUpperCase() +
+                                  newTask.category.slice(1)}
+                              </div>
+                            )}
+                          </SelectValue>
                         </SelectTrigger>
                         <SelectContent>
                           {categories.map((category) => (
@@ -2005,14 +1875,32 @@ export default function Tasks() {
                               key={category}
                               value={category.toLowerCase()}
                             >
-                              {category}
+                              <div className="flex items-center gap-2">
+                                <div
+                                  className={cn(
+                                    "w-3 h-3 rounded-full",
+                                    category.toLowerCase() === "work" &&
+                                      "bg-blue-500",
+                                    category.toLowerCase() === "personal" &&
+                                      "bg-purple-500",
+                                    category.toLowerCase() === "shopping" &&
+                                      "bg-green-500",
+                                    category.toLowerCase() === "health" &&
+                                      "bg-red-500",
+                                    category.toLowerCase() === "education" &&
+                                      "bg-yellow-500",
+                                    category.toLowerCase() === "finance" &&
+                                      "bg-orange-500"
+                                  )}
+                                />
+                                {category}
+                              </div>
                             </SelectItem>
                           ))}
                           {customCategories.map((category) => (
                             <SelectItem
                               key={category.name}
                               value={category.name.toLowerCase()}
-                              className={category.color}
                             >
                               {category.name}
                             </SelectItem>
@@ -2026,7 +1914,7 @@ export default function Tasks() {
                     ) : (
                       <div className="space-y-4">
                         <div className="flex flex-col sm:flex-row gap-2">
-                          <div className="flex-1 space-y-2">
+                          <div className="flex-1">
                             <Input
                               placeholder="Enter category name"
                               value={newCustomCategory.name}
@@ -2038,39 +1926,6 @@ export default function Tasks() {
                               }
                             />
                           </div>
-                          <Select
-                            value={newCustomCategory.color}
-                            onValueChange={(value) =>
-                              setNewCustomCategory({
-                                ...newCustomCategory,
-                                color:
-                                  value as (typeof categoryColors)[number]["value"],
-                              })
-                            }
-                          >
-                            <SelectTrigger className="w-full sm:w-[180px]">
-                              <SelectValue />
-                            </SelectTrigger>
-                            <SelectContent>
-                              {categoryColors.map((color) => (
-                                <SelectItem
-                                  key={color.value}
-                                  value={color.value}
-                                  className="bg-transparent"
-                                >
-                                  <div className="flex items-center gap-2">
-                                    <div
-                                      className={cn(
-                                        "w-3 h-3 rounded-full",
-                                        color.value
-                                      )}
-                                    />
-                                    {color.label}
-                                  </div>
-                                </SelectItem>
-                              ))}
-                            </SelectContent>
-                          </Select>
                         </div>
                         <div className="flex flex-col sm:flex-row gap-2">
                           <Button
@@ -2090,13 +1945,12 @@ export default function Tasks() {
                             className="w-full sm:w-auto order-1 sm:order-2"
                             disabled={newCustomCategory.name.length < 3}
                             onClick={() => {
-                              const newCategory = {
-                                name: newCustomCategory.name,
-                                color: newCustomCategory.color,
-                              };
                               setCustomCategories([
                                 ...customCategories,
-                                newCategory,
+                                {
+                                  name: newCustomCategory.name,
+                                  color: categoryColors[0].value,
+                                },
                               ]);
                               setNewTask({
                                 ...newTask,
@@ -2161,9 +2015,53 @@ export default function Tasks() {
                 <div className="grid gap-2">
                   <Label>Subtasks</Label>
                   <div className="space-y-2">
+                    {newTask.subtasks.map((subtask, index) => (
+                      <div key={subtask.id} className="flex items-center gap-2">
+                        <Input
+                          value={subtask.title}
+                          onChange={(e) => {
+                            const updatedSubtasks = [...newTask.subtasks];
+                            updatedSubtasks[index].title = e.target.value;
+                            setNewTask({
+                              ...newTask,
+                              subtasks: updatedSubtasks,
+                            });
+                          }}
+                        />
+                        <Button
+                          size="icon"
+                          variant="outline"
+                          onClick={() => {
+                            const updatedSubtasks = newTask.subtasks.filter(
+                              (_, i) => i !== index
+                            );
+                            setNewTask({
+                              ...newTask,
+                              subtasks: updatedSubtasks,
+                            });
+                          }}
+                        >
+                          <X className="h-4 w-4" />
+                        </Button>
+                      </div>
+                    ))}
                     <div className="flex items-center gap-2">
-                      <Input placeholder="Add subtask" />
-                      <Button size="icon" variant="outline">
+                      <Input
+                        placeholder="Add subtask"
+                        value={newSubtaskTitle}
+                        onChange={(e) => setNewSubtaskTitle(e.target.value)}
+                        onKeyDown={(e) => {
+                          if (e.key === "Enter" && newSubtaskTitle.trim()) {
+                            addNewSubtask();
+                          }
+                        }}
+                      />
+                      <Button
+                        size="icon"
+                        variant="outline"
+                        onClick={addNewSubtask}
+                        disabled={!newSubtaskTitle.trim()}
+                      >
                         <Plus className="h-4 w-4" />
                       </Button>
                     </div>
@@ -2186,18 +2084,21 @@ export default function Tasks() {
                     ))}
                   </div>
                   <TagSelect
+                    key={tagSelectKey}
                     selectedTags={newTask.tags}
                     onTagSelect={(tag) => {
                       setNewTask({
                         ...newTask,
                         tags: [...newTask.tags, tag],
                       });
+                      setTagSelectKey((prev) => prev + 1);
                     }}
                   />
                 </div>
                 <div className="grid gap-2">
+                  <Label>Recurrence</Label>
                   <RecurrenceSelector
-                    value={newTask.recurrence}
+                    value={newTask.recurrence ?? null}
                     onChange={(pattern) =>
                       setNewTask({ ...newTask, recurrence: pattern })
                     }
@@ -2206,56 +2107,88 @@ export default function Tasks() {
               </div>
               <div className="flex justify-end gap-2">
                 <DialogClose asChild>
-                  <Button variant="destructive">Close</Button>
+                  <Button variant="outline" disabled={isCreating}>
+                    Cancel
+                  </Button>
                 </DialogClose>
-                <Button onClick={handleCreateTask}>Create Task</Button>
+                <Button onClick={handleCreateTask} disabled={isCreating}>
+                  {isCreating ? (
+                    <>
+                      <Loader2 className="h-4 w-4 animate-spin" />
+                      Creating...
+                    </>
+                  ) : (
+                    "Create Task"
+                  )}
+                </Button>
               </div>
             </DialogContent>
           </Dialog>
         </div>
       </div>
+      <div className="block lg:hidden">
+        <div className="flex items-center gap-2 overflow-x-auto pb-2 pt-5">
+          <Select value={priorityFilter} onValueChange={setPriorityFilter}>
+            <SelectTrigger className="min-w-[120px] whitespace-nowrap">
+              <SelectValue placeholder="Priority" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">All Priorities</SelectItem>
+              {priorities.map((priority) => (
+                <SelectItem key={priority.value} value={priority.value}>
+                  {priority.label}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+          <Select value={statusFilter} onValueChange={setStatusFilter}>
+            <SelectTrigger className="min-w-[120px] whitespace-nowrap">
+              <SelectValue placeholder="Status" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">All Tasks</SelectItem>
+              <SelectItem value="completed">Completed</SelectItem>
+              <SelectItem value="not_completed">Not Completed</SelectItem>
+            </SelectContent>
+          </Select>
+        </div>
+      </div>
       <div className="mt-2 lg:mt-4">
         {view === "board" && <BoardView />}
         {view === "cards" && <CardsView />}
-        {view === "table" && <TableView />}
       </div>
     </div>
   );
 }
 
-interface NoTasksFoundProps {
-  onClearFilters: () => void;
-}
+const handleSubtaskToggle = async (
+  taskId: Id<"tasks">,
+  subtaskId: string,
+  checked: boolean,
+  updateSubtaskStatus: (params: {
+    taskId: Id<"tasks">;
+    subtaskId: string;
+    completed: boolean;
+  }) => Promise<void>,
+  selectedTask: Task | null,
+  setSelectedTask: React.Dispatch<React.SetStateAction<Task | null>>
+) => {
+  try {
+    await updateSubtaskStatus({
+      taskId,
+      subtaskId,
+      completed: checked,
+    });
 
-const NoTasksFound = ({ onClearFilters }: NoTasksFoundProps) => (
-  <div className="flex flex-col items-center justify-center p-8 text-center">
-    <div className="rounded-full bg-muted p-3 mb-4">
-      <Search className="h-6 w-6 text-muted-foreground" />
-    </div>
-    <h3 className="font-semibold mb-1">No tasks found</h3>
-    <p className="text-sm text-muted-foreground mb-4">
-      Try adjusting your search or filters to find what you&apos;re looking for.
-    </p>
-    <Button variant="outline" onClick={onClearFilters} className="gap-2">
-      <X className="h-4 w-4" />
-      Clear all filters
-    </Button>
-  </div>
-);
-
-const handleClearFilters = ({
-  setSearchQuery,
-  setSelectedFilterTags,
-  setPriorityFilter,
-  setStatusFilter,
-}: {
-  setSearchQuery: React.Dispatch<React.SetStateAction<string>>;
-  setSelectedFilterTags: React.Dispatch<React.SetStateAction<Tag[]>>;
-  setPriorityFilter: React.Dispatch<React.SetStateAction<string>>;
-  setStatusFilter: React.Dispatch<React.SetStateAction<string>>;
-}) => {
-  setSearchQuery("");
-  setSelectedFilterTags([]);
-  setPriorityFilter("all");
-  setStatusFilter("all");
+    if (selectedTask && selectedTask.id === taskId) {
+      setSelectedTask({
+        ...selectedTask,
+        subtasks: selectedTask.subtasks.map((st) =>
+          st.id.toString() === subtaskId ? { ...st, completed: checked } : st
+        ),
+      });
+    }
+  } catch (error) {
+    console.error("Failed to update subtask status:", error);
+  }
 };

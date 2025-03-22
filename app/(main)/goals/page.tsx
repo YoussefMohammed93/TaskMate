@@ -291,7 +291,16 @@ export default function Goals() {
     <Card
       key={goal.id}
       className="cursor-pointer transition-colors hover:bg-muted/50"
-      onClick={() => handleGoalClick(goal)}
+      onClick={(e) => {
+        const target = e.target as HTMLElement;
+        const isInteractive = target.closest(
+          '.goal-actions, button, [role="checkbox"], [role="combobox"]'
+        );
+
+        if (!isInteractive) {
+          handleGoalClick(goal);
+        }
+      }}
     >
       <CardHeader className="p-4 pb-2">
         <div className="flex items-center justify-between">
