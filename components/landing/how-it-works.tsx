@@ -402,13 +402,15 @@ export function HowItWorks() {
                         </button>
                       ) : (
                         <Link
-                          href="/dashboard"
+                          href="/tasks"
                           className={cn(
                             "cursor-pointer flex items-center px-4 py-2 rounded-lg text-sm font-medium transition-colors",
                             "bg-primary text-primary-foreground hover:bg-primary/90"
                           )}
                         >
-                          {isAuthenticated ? "Go to Dashboard" : "Get Started"}
+                          {isAuthenticated
+                            ? "Go to your workspace"
+                            : "Get Started"}
                           <ArrowRight className="ml-2 size-4" />
                         </Link>
                       )}

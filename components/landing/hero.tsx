@@ -80,7 +80,7 @@ export function Hero() {
           </p>
           <nav className="mt-12 flex flex-col sm:flex-row items-center justify-center gap-y-4 gap-x-6">
             <Link
-              href="/dashboard"
+              href="/tasks"
               className="w-full sm:w-fit"
               aria-label="Get started with TaskMate for free"
             >
@@ -88,7 +88,7 @@ export function Hero() {
                 size="lg"
                 className="w-full text-base font-medium shadow-lg hover:shadow-xl transition-all"
               >
-                {isAuthenticated ? "Go to Dashboard" : "Get Started"}
+                {isAuthenticated ? "Go to your workspace" : "Get Started"}
                 <ArrowRight aria-hidden="true" className="size-4 ml-1" />
               </Button>
             </Link>

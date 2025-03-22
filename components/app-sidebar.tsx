@@ -10,7 +10,6 @@ import {
   Trophy,
   Settings,
   ScrollText,
-  LayoutDashboard,
 } from "lucide-react";
 import Link from "next/link";
 import { cn } from "@/lib/utils";
@@ -31,11 +30,6 @@ import { Skeleton } from "@/components/ui/skeleton";
 
 const mainItems = [
   {
-    title: "Dashboard",
-    url: "/dashboard",
-    icon: LayoutDashboard,
-  },
-  {
     title: "Tasks",
     url: "/tasks",
     icon: ListTodo,
@@ -44,11 +38,6 @@ const mainItems = [
     title: "Notes",
     url: "/notes",
     icon: StickyNote,
-  },
-  {
-    title: "Documents",
-    url: "/documents",
-    icon: ScrollText,
   },
   {
     title: "Pomodoro",
@@ -64,6 +53,11 @@ const mainItems = [
     title: "Goals",
     url: "/goals",
     icon: Target,
+  },
+  {
+    title: "Documents",
+    url: "/documents",
+    icon: ScrollText,
   },
   {
     title: "Analytics",

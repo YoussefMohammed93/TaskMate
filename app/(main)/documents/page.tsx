@@ -267,7 +267,6 @@ const DocumentCard = ({
                 width={32}
                 height={32}
                 className="w-full h-full object-cover"
-                sizes="32px"
               />
             </div>
             <span
@@ -568,7 +567,7 @@ export default function Documents() {
               key={doc.id}
               className="flex flex-col sm:flex-row items-start gap-4 rounded-lg border p-4 transition-colors hover:bg-accent group"
             >
-              <div className="w-full sm:w-32 h-40 sm:h-24 flex-shrink-0 overflow-hidden rounded-md">
+              <div className="w-full relative sm:w-32 h-40 sm:h-24 flex-shrink-0 overflow-hidden rounded-md">
                 {doc.thumbnail ? (
                   <Image
                     src={doc.thumbnail}
@@ -632,13 +631,12 @@ export default function Documents() {
                 </div>
                 <div className="flex flex-wrap items-center gap-x-4 gap-y-2 mt-4">
                   <div className="flex items-center gap-2">
-                    <div className="h-6 w-6 rounded-full overflow-hidden flex-shrink-0">
+                    <div className="relative h-6 w-6 rounded-full overflow-hidden flex-shrink-0">
                       <Image
                         src={doc.author.avatar}
                         alt={doc.author.name}
                         className="object-cover"
                         fill
-                        sizes="32px"
                       />
                     </div>
                     <span
