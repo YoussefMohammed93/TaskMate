@@ -40,7 +40,18 @@ import {
   SheetHeader,
   SheetTitle,
 } from "@/components/ui/sheet";
-import dynamic from "next/dynamic";
+import {
+  Command,
+  CommandEmpty,
+  CommandGroup,
+  CommandInput,
+  CommandItem,
+} from "@/components/ui/command";
+import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from "@/components/ui/popover";
 import { SortOption } from "./types";
 import {
   DropdownMenu,
@@ -56,9 +67,9 @@ import { api } from "@/convex/_generated/api";
 import { Button } from "@/components/ui/button";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { Id } from "@/convex/_generated/dataModel";
-import { Skeleton } from "@/components/ui/skeleton";
-import { useState, useEffect, useMemo } from "react";
+import { Textarea } from "@/components/ui/textarea";
 import { useMutation, useQuery } from "convex/react";
+import { useState, useEffect, useMemo, useRef } from "react";
 
 interface Note {
   id: string;
@@ -129,12 +140,229 @@ const getTagColors = (tag: string) => {
   );
 };
 
+interface SlashCommand {
+  id: string;
+  label: string;
+  icon: React.ComponentType<{ className?: string }>;
+  action: (
+    content: string,
+    cursorPosition: number
+  ) => { text: string; newPosition: number };
+}
+
+const slashCommands: SlashCommand[] = [
+  {
+    id: "paragraph",
+    label: "Text",
+    icon: ({ className }) => <div className={className}>¶</div>,
+    action: (content: string, cursorPosition: number) => {
+      const newText =
+        content.slice(0, cursorPosition) +
+        "\n\n" +
+        content.slice(cursorPosition);
+      return { text: newText, newPosition: cursorPosition + 0 };
+    },
+  },
+  {
+    id: "numbered-list",
+    label: "Numbered List",
+    icon: ({ className }) => <div className={className}>1.</div>,
+    action: (content: string, cursorPosition: number) => {
+      const newText =
+        content.slice(0, cursorPosition) +
+        "\n1. " +
+        content.slice(cursorPosition);
+      return { text: newText, newPosition: cursorPosition + 4 };
+    },
+  },
+  {
+    id: "bullet-list",
+    label: "Bullet List",
+    icon: ({ className }) => <div className={className}>•</div>,
+    action: (content: string, cursorPosition: number) => {
+      const newText =
+        content.slice(0, cursorPosition) +
+        "\n• " +
+        content.slice(cursorPosition);
+      return { text: newText, newPosition: cursorPosition + 2 };
+    },
+  },
+];
+
+const handleListEnterKey = (
+  content: string,
+  cursorPosition: number
+): { text: string; newPosition: number } => {
+  const lines = content.slice(0, cursorPosition).split("\n");
+  const currentLine = lines[lines.length - 1];
+
+  const numberedMatch = currentLine.match(/^(\d+)\.\s(.*)/);
+  if (numberedMatch) {
+    const number = parseInt(numberedMatch[1]);
+    const text = numberedMatch[2];
+
+    if (!text.trim()) {
+      return {
+        text:
+          content.slice(0, cursorPosition - numberedMatch[0].length) +
+          content.slice(cursorPosition),
+        newPosition: cursorPosition - numberedMatch[0].length,
+      };
+    }
+
+    const nextNumber = number + 1;
+    const newText =
+      content.slice(0, cursorPosition) +
+      `\n${nextNumber}. ` +
+      content.slice(cursorPosition);
+    return {
+      text: newText,
+      newPosition: cursorPosition + `\n${nextNumber}. `.length,
+    };
+  }
+
+  const bulletMatch = currentLine.match(/^[•]\s(.*)/);
+  if (bulletMatch) {
+    const text = bulletMatch[1];
+
+    if (!text.trim()) {
+      return {
+        text:
+          content.slice(0, cursorPosition - bulletMatch[0].length) +
+          content.slice(cursorPosition),
+        newPosition: cursorPosition - bulletMatch[0].length,
+      };
+    }
+
+    const newText =
+      content.slice(0, cursorPosition) + "\n• " + content.slice(cursorPosition);
+    return { text: newText, newPosition: cursorPosition + "\n• ".length };
+  }
+
+  return {
+    text:
+      content.slice(0, cursorPosition) + "\n" + content.slice(cursorPosition),
+    newPosition: cursorPosition + 1,
+  };
+};
+
+function SlashCommandMenu({
+  isOpen,
+  onClose,
+  onSelect,
+}: {
+  isOpen: boolean;
+  onClose: () => void;
+  onSelect: (command: SlashCommand) => void;
+  triggerRef: React.RefObject<HTMLTextAreaElement>;
+}) {
+  const [inputValue, setInputValue] = useState("");
+  const [selectedIndex, setSelectedIndex] = useState(0);
+
+  const filteredCommands = slashCommands.filter((command) =>
+    command.label.toLowerCase().includes(inputValue.toLowerCase())
+  );
+
+  useEffect(() => {
+    if (!isOpen) {
+      setSelectedIndex(0);
+      setInputValue("");
+    }
+  }, [isOpen]);
+
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (!isOpen) return;
+
+      switch (e.key) {
+        case "ArrowUp":
+          e.preventDefault();
+          setSelectedIndex((prev) =>
+            prev <= 0 ? filteredCommands.length - 1 : prev - 1
+          );
+          break;
+        case "ArrowDown":
+          e.preventDefault();
+          setSelectedIndex((prev) =>
+            prev >= filteredCommands.length - 1 ? 0 : prev + 1
+          );
+          break;
+        case "Enter":
+          e.preventDefault();
+          if (filteredCommands[selectedIndex]) {
+            onSelect(filteredCommands[selectedIndex]);
+            onClose();
+          }
+          break;
+        case "Escape":
+          e.preventDefault();
+          onClose();
+          break;
+      }
+    };
+
+    document.addEventListener("keydown", handleKeyDown);
+    return () => document.removeEventListener("keydown", handleKeyDown);
+  }, [isOpen, selectedIndex, filteredCommands, onSelect, onClose]);
+
+  return (
+    <Popover open={isOpen} onOpenChange={onClose}>
+      <PopoverTrigger asChild>
+        <div className="h-0" />
+      </PopoverTrigger>
+      <PopoverContent
+        className="w-64 p-0"
+        align="start"
+        side="bottom"
+        sideOffset={-30}
+        alignOffset={-20}
+      >
+        <Command shouldFilter={false}>
+          <CommandInput
+            placeholder="Type a command..."
+            value={inputValue}
+            onValueChange={setInputValue}
+          />
+          <CommandEmpty>No commands found.</CommandEmpty>
+          <CommandGroup>
+            {filteredCommands.map((command, index) => (
+              <CommandItem
+                key={command.id}
+                onSelect={() => {
+                  onSelect(command);
+                  setInputValue("");
+                  onClose();
+                }}
+                className={cn(
+                  "flex items-center justify-between px-2 py-2.5 cursor-pointer hover:bg-accent/50 transition-colors",
+                  selectedIndex === index && "bg-accent text-accent-foreground"
+                )}
+              >
+                <div className="flex items-center gap-2">
+                  <command.icon className="h-4 w-4 text-muted-foreground" />
+                  <span className="font-medium">{command.label}</span>
+                </div>
+                <kbd className="pointer-events-none inline-flex h-5 select-none items-center gap-1 rounded border bg-muted px-1.5 font-mono text-[10px] font-medium text-muted-foreground opacity-100">
+                  <span className="text-xs">⌘</span>
+                  {index + 1}
+                </kbd>
+              </CommandItem>
+            ))}
+          </CommandGroup>
+        </Command>
+      </PopoverContent>
+    </Popover>
+  );
+}
+
 export default function Notes() {
   const [mounted, setMounted] = useState(false);
   const [view, setView] = useState<"grid" | "list" | "kanban">("grid");
   const [searchQuery, setSearchQuery] = useState("");
   const [sortBy, setSortBy] = useState<SortOption>("date-desc");
   const [isNewNoteDialogOpen, setIsNewNoteDialogOpen] = useState(false);
+  const [isCreating, setIsCreating] = useState(false);
+  const [isUpdating, setIsUpdating] = useState(false);
   const [newNote, setNewNote] = useState({
     title: "",
     content: "",
@@ -144,6 +372,10 @@ export default function Notes() {
   const [newCustomTag, setNewCustomTag] = useState("");
   const [, setIsEditDialogOpen] = useState(false);
   const [, setEditingNote] = useState<Note | null>(null);
+  const [showSlashCommands, setShowSlashCommands] = useState(false);
+  const [isDeleting, setIsDeleting] = useState(false);
+  const [, setIsDeleteDialogOpen] = useState(false);
+  const textareaRef = useRef<HTMLTextAreaElement>(null);
 
   const notesQuery = useQuery(api.notes.list);
   const notes = useMemo(() => notesQuery || [], [notesQuery]);
@@ -169,30 +401,23 @@ export default function Notes() {
     }
   }, [view, mounted]);
 
-  const Editor = useMemo(
-    () =>
-      dynamic(() => import("@/components/notes/editor"), {
-        ssr: false,
-        loading: () => (
-          <div className="w-full animate-pulse">
-            <Skeleton className="h-40 w-full" />
-          </div>
-        ),
-      }),
-    []
-  );
-
   const handleCreateNote = async (note: {
     title: string;
     content: string;
     tags: string[];
   }) => {
+    if (!note.title.trim() || !note.content.trim()) {
+      toast.error("Title and content are required");
+      return;
+    }
+
+    setIsCreating(true);
     const toastId = toast.loading("Creating note...");
 
     try {
       await createNote({
         title: note.title,
-        content: note.content || JSON.stringify([]),
+        content: note.content,
         tags: note.tags,
         color: "blue-500",
         isPinned: false,
@@ -217,6 +442,8 @@ export default function Notes() {
         id: toastId,
         description: "Please try again later.",
       });
+    } finally {
+      setIsCreating(false);
     }
   };
 
@@ -240,6 +467,7 @@ export default function Notes() {
   };
 
   const handleDeleteNote = async (noteId: Id<"notes">) => {
+    setIsDeleting(true);
     const toastId = toast.loading("Deleting note...");
 
     try {
@@ -249,16 +477,25 @@ export default function Notes() {
         id: toastId,
         description: "The note has been deleted.",
       });
+      setIsDeleteDialogOpen(false);
     } catch (error) {
       console.error("Failed to delete note:", error);
       toast.error("Failed to delete note", {
         id: toastId,
         description: "Please try again later.",
       });
+    } finally {
+      setIsDeleting(false);
     }
   };
 
   const handleUpdateNote = async (note: Note) => {
+    if (!note.title.trim() || !note.content.trim()) {
+      toast.error("Title and content are required");
+      return;
+    }
+
+    setIsUpdating(true);
     const toastId = toast.loading(`Updating "${note.title}"...`);
 
     try {
@@ -284,6 +521,111 @@ export default function Notes() {
         id: toastId,
         description: "Please try again later.",
       });
+    } finally {
+      setIsUpdating(false);
+    }
+  };
+
+  const handleTextareaChange = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
+    const value = e.target.value;
+    setNewNote({ ...newNote, content: value });
+
+    const cursorPosition = e.target.selectionStart;
+    const lastChar = value.charAt(cursorPosition - 1);
+    const prevChar = value.charAt(cursorPosition - 2);
+
+    if (lastChar === "/" && (prevChar === "\n" || prevChar === "")) {
+      setShowSlashCommands(true);
+    } else {
+      setShowSlashCommands(false);
+    }
+
+    if (lastChar === "\n") {
+      const placeholderText = "Type '/' for text and list formatting";
+      const newText =
+        value.slice(0, cursorPosition) +
+        placeholderText +
+        value.slice(cursorPosition);
+
+      setNewNote({ ...newNote, content: newText });
+
+      setTimeout(() => {
+        if (textareaRef.current) {
+          textareaRef.current.setSelectionRange(
+            cursorPosition,
+            cursorPosition + placeholderText.length
+          );
+        }
+      }, 0);
+    }
+  };
+
+  const handleSlashCommand = (command: SlashCommand) => {
+    if (!textareaRef.current) return;
+
+    const cursorPosition = textareaRef.current.selectionStart;
+    const currentContent = newNote.content;
+
+    const contentWithoutSlash =
+      currentContent.slice(0, cursorPosition - 1) +
+      currentContent.slice(cursorPosition);
+    const { text, newPosition } = command.action(
+      contentWithoutSlash,
+      cursorPosition - 1
+    );
+
+    setNewNote({ ...newNote, content: text });
+    setShowSlashCommands(false);
+
+    setTimeout(() => {
+      if (textareaRef.current) {
+        textareaRef.current.focus();
+        textareaRef.current.setSelectionRange(newPosition, newPosition);
+      }
+    }, 0);
+  };
+
+  const handleTextareaKeyDown = (
+    e: React.KeyboardEvent<HTMLTextAreaElement>
+  ) => {
+    if (e.key === "Enter") {
+      e.preventDefault();
+      const { text, newPosition } = handleListEnterKey(
+        newNote.content,
+        e.currentTarget.selectionStart
+      );
+      setNewNote({ ...newNote, content: text });
+
+      setTimeout(() => {
+        if (textareaRef.current) {
+          textareaRef.current.focus();
+          textareaRef.current.setSelectionRange(newPosition, newPosition);
+        }
+      }, 0);
+      return;
+    }
+
+    const selection = e.currentTarget.selectionStart;
+    const content = newNote.content;
+    const placeholderText = "Type '/' for text and list formatting";
+
+    if (content.includes(placeholderText)) {
+      const placeholderStart = content.indexOf(placeholderText);
+      const placeholderEnd = placeholderStart + placeholderText.length;
+
+      if (selection >= placeholderStart && selection <= placeholderEnd) {
+        const newText = content.replace(placeholderText, "");
+        setNewNote({ ...newNote, content: newText });
+
+        setTimeout(() => {
+          if (textareaRef.current) {
+            textareaRef.current.setSelectionRange(
+              placeholderStart,
+              placeholderStart
+            );
+          }
+        }, 0);
+      }
     }
   };
 
@@ -395,12 +737,22 @@ export default function Notes() {
                   </div>
                   <div className="grid gap-2">
                     <Label>Content</Label>
-                    <Editor
-                      initialContent={newNote.content}
-                      onChange={(content: string) =>
-                        setNewNote({ ...newNote, content })
-                      }
-                    />
+                    <div className="relative">
+                      <Textarea
+                        ref={textareaRef}
+                        placeholder="Type your note content here... (Type '/' for text and list formatting)"
+                        value={newNote.content}
+                        onChange={handleTextareaChange}
+                        onKeyDown={handleTextareaKeyDown}
+                        className="min-h-[200px] resize-none placeholder:text-muted-foreground/60 placeholder:text-sm font-mono"
+                      />
+                      <SlashCommandMenu
+                        isOpen={showSlashCommands}
+                        onClose={() => setShowSlashCommands(false)}
+                        onSelect={handleSlashCommand}
+                        triggerRef={textareaRef}
+                      />
+                    </div>
                   </div>
                   <div className="grid gap-2">
                     <Label>Tags</Label>
@@ -499,7 +851,7 @@ export default function Notes() {
                     Cancel
                   </Button>
                   <Button
-                    disabled={!newNote.title.trim()}
+                    disabled={!newNote.title.trim() || isCreating}
                     onClick={() => {
                       handleCreateNote(newNote);
                       setNewNote({ title: "", content: "", tags: [] });
@@ -507,7 +859,14 @@ export default function Notes() {
                       setNewCustomTag("");
                     }}
                   >
-                    Create Note
+                    {isCreating ? (
+                      <>
+                        <Loader2 className="h-4 w-4 animate-spin" />
+                        Creating...
+                      </>
+                    ) : (
+                      "Create Note"
+                    )}
                   </Button>
                 </DialogFooter>
               </DialogContent>
@@ -611,6 +970,8 @@ export default function Notes() {
                           handleDeleteNote(note._id as Id<"notes">)
                         }
                         handleUpdateNote={handleUpdateNote}
+                        isUpdating={isUpdating}
+                        isDeleting={isDeleting}
                       />
                     ))}
                   </div>
@@ -642,6 +1003,8 @@ export default function Notes() {
                       onPin={() => handlePinNote(note._id as Id<"notes">)}
                       onDelete={() => handleDeleteNote(note._id as Id<"notes">)}
                       handleUpdateNote={handleUpdateNote}
+                      isUpdating={isUpdating}
+                      isDeleting={isDeleting}
                     />
                   ))}
                 </div>
@@ -677,6 +1040,8 @@ export default function Notes() {
                           handleDeleteNote(note._id as Id<"notes">)
                         }
                         handleUpdateNote={handleUpdateNote}
+                        isUpdating={isUpdating}
+                        isDeleting={isDeleting}
                       />
                     ))}
                   </div>
@@ -708,6 +1073,8 @@ export default function Notes() {
                       onPin={() => handlePinNote(note._id as Id<"notes">)}
                       onDelete={() => handleDeleteNote(note._id as Id<"notes">)}
                       handleUpdateNote={handleUpdateNote}
+                      isUpdating={isUpdating}
+                      isDeleting={isDeleting}
                     />
                   ))}
                 </div>
@@ -740,6 +1107,8 @@ export default function Notes() {
                       onPin={() => handlePinNote(note._id as Id<"notes">)}
                       onDelete={() => handleDeleteNote(note._id as Id<"notes">)}
                       handleUpdateNote={handleUpdateNote}
+                      isUpdating={isUpdating}
+                      isDeleting={isDeleting}
                     />
                   ))}
                 </div>
@@ -768,6 +1137,8 @@ export default function Notes() {
                       onPin={() => handlePinNote(note._id as Id<"notes">)}
                       onDelete={() => handleDeleteNote(note._id as Id<"notes">)}
                       handleUpdateNote={handleUpdateNote}
+                      isUpdating={isUpdating}
+                      isDeleting={isDeleting}
                     />
                   ))}
                 </div>
@@ -785,27 +1156,114 @@ interface NoteCardProps {
   onPin: () => void;
   onDelete: () => void;
   handleUpdateNote: (note: Note) => Promise<void>;
+  isUpdating: boolean;
+  isDeleting: boolean;
 }
 
-function NoteCard({ note, onPin, onDelete, handleUpdateNote }: NoteCardProps) {
+function NoteCard({
+  note,
+  onPin,
+  onDelete,
+  handleUpdateNote,
+  isUpdating,
+  isDeleting,
+}: NoteCardProps) {
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
   const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
   const [isDetailsSheetOpen, setIsDetailsSheetOpen] = useState(false);
   const [editingNote, setEditingNote] = useState<Note | null>(null);
+  const [showEditSlashCommands, setShowEditSlashCommands] = useState(false);
   const isMobile = useIsMobile();
 
-  const Editor = useMemo(
-    () =>
-      dynamic(() => import("@/components/notes/editor"), {
-        ssr: false,
-        loading: () => (
-          <div className="w-full animate-pulse">
-            <Skeleton className="h-40 w-full" />
-          </div>
-        ),
-      }),
-    []
-  );
+  const editTextareaRef = useRef<HTMLTextAreaElement>(null);
+
+  const handleEditTextareaChange = (
+    e: React.ChangeEvent<HTMLTextAreaElement>
+  ) => {
+    const value = e.target.value;
+    setEditingNote(editingNote ? { ...editingNote, content: value } : null);
+
+    const cursorPosition = e.target.selectionStart;
+    const lastChar = value.charAt(cursorPosition - 1);
+    const prevChar = value.charAt(cursorPosition - 2);
+
+    if (lastChar === "/" && (prevChar === "\n" || prevChar === "")) {
+      setShowEditSlashCommands(true);
+    } else {
+      setShowEditSlashCommands(false);
+    }
+  };
+
+  const handleEditTextareaKeyDown = (
+    e: React.KeyboardEvent<HTMLTextAreaElement>
+  ) => {
+    if (e.key === "Enter") {
+      e.preventDefault();
+      const { text, newPosition } = handleListEnterKey(
+        editingNote?.content || "",
+        e.currentTarget.selectionStart
+      );
+      setEditingNote(editingNote ? { ...editingNote, content: text } : null);
+
+      setTimeout(() => {
+        if (editTextareaRef.current) {
+          editTextareaRef.current.focus();
+          editTextareaRef.current.setSelectionRange(newPosition, newPosition);
+        }
+      }, 0);
+      return;
+    }
+
+    const selection = e.currentTarget.selectionStart;
+    const content = editingNote?.content || "";
+    const placeholderText = "Type '/' for text and list formatting";
+
+    if (content.includes(placeholderText)) {
+      const placeholderStart = content.indexOf(placeholderText);
+      const placeholderEnd = placeholderStart + placeholderText.length;
+
+      if (selection >= placeholderStart && selection <= placeholderEnd) {
+        const newText = content.replace(placeholderText, "");
+        setEditingNote(
+          editingNote ? { ...editingNote, content: newText } : null
+        );
+
+        setTimeout(() => {
+          if (editTextareaRef.current) {
+            editTextareaRef.current.setSelectionRange(
+              placeholderStart,
+              placeholderStart
+            );
+          }
+        }, 0);
+      }
+    }
+  };
+
+  const handleEditSlashCommand = (command: SlashCommand) => {
+    if (!editTextareaRef.current) return;
+
+    const cursorPosition = editTextareaRef.current.selectionStart;
+    const currentContent = editingNote?.content || "";
+
+    const contentWithoutSlash =
+      currentContent.slice(0, cursorPosition - 1) +
+      currentContent.slice(cursorPosition);
+    const { text, newPosition } = command.action(
+      contentWithoutSlash,
+      cursorPosition - 1
+    );
+
+    setEditingNote(editingNote ? { ...editingNote, content: text } : null);
+    setShowEditSlashCommands(false);
+
+    setTimeout(() => {
+      if (editTextareaRef.current) {
+        editTextareaRef.current.focus();
+        editTextareaRef.current.setSelectionRange(newPosition, newPosition);
+      }
+    }, 0);
+  };
 
   return (
     <>
@@ -852,18 +1310,38 @@ function NoteCard({ note, onPin, onDelete, handleUpdateNote }: NoteCardProps) {
                     setEditingNote(note);
                     setIsEditDialogOpen(true);
                   }}
+                  disabled={isUpdating}
                 >
-                  <Pencil className="h-4 w-4" />
-                  Edit note
+                  {isUpdating ? (
+                    <>
+                      <Loader2 className="h-4 w-4 animate-spin" />
+                      Updating...
+                    </>
+                  ) : (
+                    <>
+                      <Pencil className="h-4 w-4" />
+                      Edit note
+                    </>
+                  )}
                 </DropdownMenuItem>
                 <DropdownMenuItem
                   onClick={(e) => {
                     e.stopPropagation();
                     setIsDeleteDialogOpen(true);
                   }}
+                  disabled={isDeleting}
                 >
-                  <Trash2 className="h-4 w-4" />
-                  Delete note
+                  {isDeleting ? (
+                    <>
+                      <Loader2 className="h-4 w-4 animate-spin" />
+                      Deleting...
+                    </>
+                  ) : (
+                    <>
+                      <Trash2 className="h-4 w-4" />
+                      Delete note
+                    </>
+                  )}
                 </DropdownMenuItem>
               </DropdownMenuContent>
             </DropdownMenu>
@@ -1009,19 +1487,22 @@ function NoteCard({ note, onPin, onDelete, handleUpdateNote }: NoteCardProps) {
             </div>
             <div className="grid gap-2">
               <Label>Content</Label>
-              <Editor
-                initialContent={editingNote?.content || ""}
-                onChange={(content: string) =>
-                  setEditingNote(
-                    editingNote
-                      ? {
-                          ...editingNote,
-                          content,
-                        }
-                      : null
-                  )
-                }
-              />
+              <div className="relative">
+                <Textarea
+                  ref={editTextareaRef}
+                  value={editingNote?.content}
+                  onChange={handleEditTextareaChange}
+                  onKeyDown={handleEditTextareaKeyDown}
+                  className="min-h-[200px] resize-none font-mono"
+                  placeholder="Type your note content here... (Type '/' for text and list formatting)"
+                />
+                <SlashCommandMenu
+                  isOpen={showEditSlashCommands}
+                  onClose={() => setShowEditSlashCommands(false)}
+                  onSelect={handleEditSlashCommand}
+                  triggerRef={editTextareaRef}
+                />
+              </div>
             </div>
             <div className="grid gap-2">
               <Label>Tags</Label>
@@ -1049,16 +1530,10 @@ function NoteCard({ note, onPin, onDelete, handleUpdateNote }: NoteCardProps) {
                         size="icon"
                         className="h-4 w-4 ml-1 hover:bg-transparent"
                         onClick={() =>
-                          setEditingNote(
-                            editingNote
-                              ? {
-                                  ...editingNote,
-                                  tags: editingNote.tags.filter(
-                                    (t) => t !== tag
-                                  ),
-                                }
-                              : null
-                          )
+                          setEditingNote({
+                            ...editingNote,
+                            tags: editingNote.tags.filter((t) => t !== tag),
+                          })
                         }
                       >
                         <X className="h-3 w-3" />
@@ -1070,14 +1545,12 @@ function NoteCard({ note, onPin, onDelete, handleUpdateNote }: NoteCardProps) {
               <TagSelect
                 selectedTags={editingNote?.tags || []}
                 onTagSelect={(tag) => {
-                  setEditingNote(
-                    editingNote
-                      ? {
-                          ...editingNote,
-                          tags: [...editingNote.tags, tag],
-                        }
-                      : null
-                  );
+                  if (editingNote) {
+                    setEditingNote({
+                      ...editingNote,
+                      tags: [...editingNote.tags, tag],
+                    });
+                  }
                 }}
               />
             </div>
@@ -1093,14 +1566,27 @@ function NoteCard({ note, onPin, onDelete, handleUpdateNote }: NoteCardProps) {
               Cancel
             </Button>
             <Button
-              disabled={!editingNote?.title.trim()}
-              onClick={() => {
+              disabled={
+                !editingNote?.title.trim() ||
+                !editingNote?.content.trim() ||
+                isUpdating
+              }
+              onClick={async () => {
                 if (editingNote) {
-                  handleUpdateNote(editingNote);
+                  await handleUpdateNote(editingNote);
+                  setIsEditDialogOpen(false);
+                  setEditingNote(null);
                 }
               }}
             >
-              Save Changes
+              {isUpdating ? (
+                <>
+                  <Loader2 className="h-4 w-4 animate-spin" />
+                  Saving...
+                </>
+              ) : (
+                "Save Changes"
+              )}
             </Button>
           </DialogFooter>
         </DialogContent>
@@ -1118,17 +1604,23 @@ function NoteCard({ note, onPin, onDelete, handleUpdateNote }: NoteCardProps) {
             <Button
               variant="outline"
               onClick={() => setIsDeleteDialogOpen(false)}
+              disabled={isDeleting}
             >
               Cancel
             </Button>
             <Button
               variant="destructive"
-              onClick={() => {
-                onDelete();
-                setIsDeleteDialogOpen(false);
-              }}
+              onClick={() => onDelete()}
+              disabled={isDeleting}
             >
-              Delete
+              {isDeleting ? (
+                <>
+                  <Loader2 className="h-4 w-4 animate-spin" />
+                  Deleting...
+                </>
+              ) : (
+                "Delete"
+              )}
             </Button>
           </DialogFooter>
         </DialogContent>
