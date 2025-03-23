@@ -2,8 +2,6 @@
 
 import {
   Plus,
-  LayoutGrid,
-  Columns,
   Calendar,
   Clock,
   ChevronDown,
@@ -18,8 +16,8 @@ import {
   Trash2,
   Search,
   RefreshCw,
-  ClipboardX,
   GripVertical,
+  ClipboardX,
 } from "lucide-react";
 import {
   closestCorners,
@@ -66,6 +64,7 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { priorities } from "./constants";
+import { useMemo, useState } from "react";
 import { addMonths, setDay } from "date-fns";
 import { api } from "@/convex/_generated/api";
 import { Label } from "@/components/ui/label";
@@ -79,15 +78,12 @@ import { Textarea } from "@/components/ui/textarea";
 import { Progress } from "@/components/ui/progress";
 import { TagSelect } from "./components/tag-select";
 import { Checkbox } from "@/components/ui/checkbox";
-import { useEffect, useMemo, useState } from "react";
 import { useMutation, useQuery } from "convex/react";
 import { EditTaskDialog } from "./components/edit-task-dialog";
 import { DeleteTaskDialog } from "./components/delete-task-dialog";
 import { EditSubtaskDialog } from "./components/edit-subtask-dialog";
 import { Calendar as CalendarComponent } from "@/components/ui/calendar";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-
-type ViewType = "board" | "cards";
 
 type Tag = {
   id: string;
@@ -707,7 +703,7 @@ const TaskActions = ({
             description: task.description || "",
             priority: task.priority,
             category: task.category,
-            dueDate: task.dueDate, // Add dueDate
+            dueDate: task.dueDate,
             tags: task.tags,
             subtasks: task.subtasks || [],
             recurrence: task.recurrence
@@ -721,7 +717,7 @@ const TaskActions = ({
                 }
               : null,
             status: task.status,
-            createdAt: task.createdAt, // Add createdAt
+            createdAt: task.createdAt,
           });
         }}
         isEditing={isEditing}
@@ -755,8 +751,6 @@ const TaskActions = ({
 };
 
 export default function Tasks() {
-  const [mounted, setMounted] = useState(false);
-  const [view, setView] = useState<ViewType>("board");
   const [selectedFilterTags] = useState<Tag[]>([]);
   const [searchQuery, setSearchQuery] = useState("");
   const [priorityFilter, setPriorityFilter] = useState("all");
@@ -770,7 +764,7 @@ export default function Tasks() {
     title: "",
     description: "",
     priority: "medium",
-    category: categories[0].toLowerCase(), // This will now default to "Work"
+    category: categories[0].toLowerCase(),
     dueDate: new Date(),
     status: "not_started",
     tags: [],
@@ -882,15 +876,6 @@ export default function Tasks() {
   };
 
   const tasks = useQuery(api.tasks.list);
-  const isLoading = tasks === undefined || !mounted;
-
-  useEffect(() => {
-    const savedView = localStorage.getItem("tasksView");
-    if (savedView && (savedView === "board" || savedView === "cards")) {
-      setView(savedView as ViewType);
-    }
-    setMounted(true);
-  }, []);
 
   const transformedTasks: Task[] = useMemo(() => {
     if (!tasks) return [];
@@ -952,10 +937,6 @@ export default function Tasks() {
     statusFilter,
   ]);
 
-  useEffect(() => {
-    localStorage.setItem("taskView", view);
-  }, [view]);
-
   const updateTaskStatus = useMutation(api.tasks.updateTaskStatus);
 
   const handleStatusChange = async (taskId: Id<"tasks">, newStatus: string) => {
@@ -976,45 +957,7 @@ export default function Tasks() {
     }
   };
 
-  const ViewToggle = () => (
-    <DropdownMenu>
-      <DropdownMenuTrigger asChild className="dark:bg-muted/50">
-        <Button variant="outline" className="gap-2">
-          {view === "board" && <Columns className="h-4 w-4" />}
-          {view === "cards" && <LayoutGrid className="h-4 w-4" />}
-          {view.charAt(0).toUpperCase() + view.slice(1)} View
-          <ChevronDown className="h-4 w-4" />
-        </Button>
-      </DropdownMenuTrigger>
-      <DropdownMenuContent className="dark:bg-secondary" align="end">
-        <DropdownMenuItem
-          onClick={() => {
-            setView("board");
-            localStorage.setItem("tasksView", "board");
-          }}
-        >
-          <Columns className="h-4 w-4" /> Board View
-        </DropdownMenuItem>
-        <DropdownMenuItem
-          onClick={() => {
-            setView("cards");
-            localStorage.setItem("tasksView", "cards");
-          }}
-        >
-          <LayoutGrid className="h-4 w-4" /> Cards View
-        </DropdownMenuItem>
-      </DropdownMenuContent>
-    </DropdownMenu>
-  );
-
-  const TaskCard = ({
-    task,
-    view,
-  }: {
-    task: Task;
-    view: ViewType;
-    children?: React.ReactNode;
-  }) => {
+  const TaskCard = ({ task }: { task: Task; children?: React.ReactNode }) => {
     const { attributes, listeners, setNodeRef, transform } = useDraggable({
       id: task.id,
     });
@@ -1043,17 +986,7 @@ export default function Tasks() {
 
     return (
       <div ref={setNodeRef} style={style}>
-        <Card
-          className={cn(
-            view === "cards" ? "border" : "border-none shadow-sm",
-            "relative cursor-pointer"
-          )}
-          style={
-            view === "cards"
-              ? { borderLeftColor: priorityColor.borderColor }
-              : undefined
-          }
-        >
+        <Card className="relative cursor-pointer shadow-sm">
           <CardHeader
             className="p-4 space-y-3"
             onClick={(e) => {
@@ -1485,9 +1418,9 @@ export default function Tasks() {
                 </div>
               )}
               <div className="pt-4 border-t space-y-2">
-                <div className="flex items-center justify-between text-xs text-muted-foreground">
-                  <div className="flex items-center gap-1">
-                    <Clock className="h-3 w-3" />
+                <div className="flex flex-col sm:flex-row gap-2 sm:items-center justify-between text-xs text-muted-foreground">
+                  <div className="flex items-center gap-2 sm:gap-1">
+                    <Clock className="h-3.5 w-3.5" />
                     Created:{" "}
                     {selectedTask?.createdAt
                       ? format(
@@ -1497,8 +1430,8 @@ export default function Tasks() {
                       : "Not available"}
                   </div>
                   {selectedTask?.updatedAt && (
-                    <div className="flex items-center gap-1">
-                      <RefreshCw className="h-3 w-3" />
+                    <div className="flex items-center gap-2 sm:gap-1">
+                      <RefreshCw className="h-3.5 w-3.5" />
                       Updated:{" "}
                       {format(
                         new Date(selectedTask.updatedAt),
@@ -1527,6 +1460,92 @@ export default function Tasks() {
         },
       })
     );
+
+    if (!tasks) {
+      return (
+        <div className="w-full h-[50vh] flex items-center justify-center">
+          <Loader2 className="h-8 w-8 animate-spin" />
+        </div>
+      );
+    }
+
+    if (tasks && filteredTasks.length === 0) {
+      const hasNoTasks = tasks.length === 0;
+      const hasActiveFilters =
+        searchQuery || priorityFilter !== "all" || statusFilter !== "all";
+
+      return (
+        <div className="flex flex-col items-center justify-center min-h-[400px] p-8 text-center">
+          <div className="relative mb-6">
+            <div className="absolute inset-0 bg-primary/5 blur-xl rounded-full" />
+            <div className="relative p-6 bg-secondary dark:bg-muted/50 backdrop-blur-sm rounded-full ring-1 ring-border/50">
+              {hasActiveFilters ? (
+                <Search className="size-14 text-primary/70" strokeWidth={1.5} />
+              ) : (
+                <ClipboardX
+                  className="size-14 text-primary/70"
+                  strokeWidth={1.5}
+                />
+              )}
+            </div>
+          </div>
+          <div className="space-y-3 max-w-xl">
+            <h3 className="text-2xl font-semibold tracking-tight">
+              {hasNoTasks ? "No Tasks Yet" : "No tasks found"}
+            </h3>
+            <p className="text-muted-foreground text-sm leading-relaxed">
+              {hasNoTasks ? (
+                <>
+                  Ready to get organized? Start by creating your first task
+                  using the
+                  <b className="font-semibold text-primary"> New Task </b>
+                  button above.
+                </>
+              ) : (
+                <>
+                  {searchQuery && (
+                    <span>
+                      Search Term:{" "}
+                      <b>
+                        <q> {searchQuery}</q>
+                      </b>
+                      <br />
+                    </span>
+                  )}
+                  {priorityFilter !== "all" && (
+                    <span>
+                      Priority Filter:{" "}
+                      <b>
+                        {priorityFilter.charAt(0).toUpperCase() +
+                          priorityFilter.slice(1)}
+                      </b>
+                      <br />
+                    </span>
+                  )}
+                  {statusFilter !== "all" && (
+                    <span>
+                      Status Filter:{" "}
+                      <b>
+                        {statusFilter
+                          .replace("_", " ")
+                          .charAt(0)
+                          .toUpperCase() +
+                          statusFilter.replace("_", " ").slice(1)}
+                      </b>
+                      <br />
+                    </span>
+                  )}
+                  <span className="block mt-2">
+                    Try adjusting your search criteria or filters to find what
+                    you&apos;re looking for.
+                  </span>
+                </>
+              )}
+            </p>
+          </div>
+        </div>
+      );
+    }
 
     const notStartedTasks = filteredTasks.filter(
       (task) => task.status === "not_started"
@@ -1612,7 +1631,7 @@ export default function Tasks() {
             </div>
             <Badge
               className={cn(
-                "text-white",
+                "text-white hover:bg-opacity-100",
                 color.replace("bg-", "bg-opacity-80 bg-")
               )}
             >
@@ -1621,7 +1640,7 @@ export default function Tasks() {
           </div>
           <div className="space-y-3">
             {tasks.map((task) => (
-              <TaskCard key={task.id} task={task} view={view}>
+              <TaskCard key={task.id} task={task}>
                 <Badge
                   variant="outline"
                   className={cn(
@@ -1659,26 +1678,25 @@ export default function Tasks() {
             id="not_started"
             title="Not Started"
             tasks={notStartedTasks}
-            color="bg-slate-400"
+            color="bg-gray-500"
           />
           <DroppableColumn
             id="in_progress"
             title="In Progress"
             tasks={inProgressTasks}
-            color="bg-blue-400"
+            color="bg-blue-500"
           />
           <DroppableColumn
             id="completed"
             title="Completed"
             tasks={completedTasks}
-            color="bg-green-400"
+            color="bg-green-500"
           />
         </div>
-
         <DragOverlay>
           {activeTask ? (
             <div className="opacity-50">
-              <TaskCard task={activeTask} view={view}>
+              <TaskCard task={activeTask}>
                 <Badge
                   variant="outline"
                   className={cn(
@@ -1700,47 +1718,6 @@ export default function Tasks() {
       </DndContext>
     );
   };
-
-  const CardsView = () => (
-    <>
-      {filteredTasks.length > 0 ? (
-        <div className="grid grid-cols-1 xl:grid-cols-2 gap-4 md:pt-2">
-          {filteredTasks.map((task) => (
-            <TaskCard key={task.id} task={task} view={view}>
-              <Badge
-                variant="outline"
-                className={cn(
-                  "capitalize",
-                  priorityColors[task.priority as keyof typeof priorityColors]
-                    .text,
-                  priorityColors[task.priority as keyof typeof priorityColors]
-                    .bg
-                )}
-              >
-                {task.priority}
-              </Badge>
-            </TaskCard>
-          ))}
-        </div>
-      ) : (
-        <div className="flex flex-col items-center justify-center p-8 text-center">
-          <div className="p-5 mb-3 bg-secondary rounded-full flex items-center justify-center">
-            {searchQuery ? (
-              <Search className="size-12 text-muted-foreground" />
-            ) : (
-              <ClipboardX className="size-12 text-muted-foreground" />
-            )}
-          </div>
-          <h3 className="font-semibold text-lg mb-2">No tasks found</h3>
-          <p className="text-muted-foreground text-sm max-w-lg">
-            {searchQuery
-              ? "Try adjusting your search or filters to find what you're looking for."
-              : "Get started by creating your first task using the 'New Task' button above."}
-          </p>
-        </div>
-      )}
-    </>
-  );
 
   const createTask = useMutation(api.tasks.createTask);
 
@@ -1784,7 +1761,7 @@ export default function Tasks() {
         title: "",
         description: "",
         priority: "medium",
-        category: categories[0].toLowerCase(), // This will now default to "Work"
+        category: categories[0].toLowerCase(),
         dueDate: new Date(),
         status: "not_started",
         tags: [],
@@ -1804,28 +1781,6 @@ export default function Tasks() {
       setIsCreating(false);
     }
   };
-
-  useEffect(() => {
-    const savedView = localStorage.getItem("tasksView");
-    if (savedView && (savedView === "board" || savedView === "cards")) {
-      setView(savedView as ViewType);
-    }
-    setMounted(true);
-  }, []);
-
-  useEffect(() => {
-    if (mounted) {
-      localStorage.setItem("taskView", view);
-    }
-  }, [view, mounted]);
-
-  if (isLoading) {
-    return (
-      <div className="h-full flex items-center justify-center">
-        <Loader2 className="animate-spin h-8 w-8" />
-      </div>
-    );
-  }
 
   const TaskFilters = () => (
     <div className="flex flex-wrap gap-2">
@@ -1876,8 +1831,6 @@ export default function Tasks() {
           />
         </div>
         <div className="flex lg:hidden items-center justify-between gap-2 w-full">
-          <ViewToggle />
-          {/* Add New Task button for mobile */}
           <Dialog
             open={isNewTaskDialogOpen}
             onOpenChange={setIsNewTaskDialogOpen}
@@ -1888,12 +1841,11 @@ export default function Tasks() {
                 <span>New Task</span>
               </Button>
             </DialogTrigger>
-            {/* Keep existing Dialog content */}
           </Dialog>
         </div>
       </div>
       <div className="block lg:hidden">
-        <div className="flex items-center gap-2 overflow-x-auto pb-2 pt-5">
+        <div className="flex items-center gap-2 overflow-x-auto pb-2">
           <Select value={priorityFilter} onValueChange={setPriorityFilter}>
             <SelectTrigger className="min-w-[120px] whitespace-nowrap">
               <SelectValue placeholder="Priority" />
@@ -1933,7 +1885,6 @@ export default function Tasks() {
           <TaskFilters />
         </div>
         <div className="flex items-center gap-2">
-          <ViewToggle />
           <Dialog
             open={isNewTaskDialogOpen}
             onOpenChange={setIsNewTaskDialogOpen}
@@ -2322,8 +2273,7 @@ export default function Tasks() {
         </div>
       </div>
       <div className="mt-2 lg:mt-4">
-        {view === "board" && <BoardView />}
-        {view === "cards" && <CardsView />}
+        <BoardView />
       </div>
     </div>
   );
