@@ -13,6 +13,7 @@ import {
   Pencil,
   Columns,
   Loader2,
+  ClipboardX,
 } from "lucide-react";
 import { toast } from "sonner";
 import {
@@ -379,6 +380,7 @@ export default function Notes() {
 
   const notesQuery = useQuery(api.notes.list);
   const notes = useMemo(() => notesQuery || [], [notesQuery]);
+  const isLoading = !mounted || notesQuery === undefined;
   const createNote = useMutation(api.notes.create);
   const updateNote = useMutation(api.notes.update);
   const togglePin = useMutation(api.notes.togglePin);
@@ -630,7 +632,7 @@ export default function Notes() {
   };
 
   const filteredAndSortedNotes = useMemo(() => {
-    if (!notes) return [];
+    if (isLoading || !notes) return [];
 
     const filtered = notes.filter((note) => {
       const matchesSearch =
@@ -670,424 +672,123 @@ export default function Notes() {
           return 0;
       }
     });
-  }, [notes, searchQuery, sortBy]);
+  }, [notes, searchQuery, sortBy, isLoading]);
 
   const pinnedNotes = useMemo(
-    () => filteredAndSortedNotes.filter((note) => note.isPinned),
-    [filteredAndSortedNotes]
+    () =>
+      isLoading ? [] : filteredAndSortedNotes.filter((note) => note.isPinned),
+    [filteredAndSortedNotes, isLoading]
   );
 
   const unpinnedNotes = useMemo(
-    () => filteredAndSortedNotes.filter((note) => !note.isPinned),
-    [filteredAndSortedNotes]
+    () =>
+      isLoading ? [] : filteredAndSortedNotes.filter((note) => !note.isPinned),
+    [filteredAndSortedNotes, isLoading]
   );
 
-  if (!mounted) {
-    return (
-      <div className="h-full flex items-center justify-center">
-        <Loader2 className="animate-spin h-8 w-8" />
-      </div>
-    );
-  }
+  const renderContent = () => {
+    if (isLoading) {
+      return (
+        <div className="w-full h-[50vh] flex items-center justify-center">
+          <Loader2 className="h-8 w-8 animate-spin" />
+        </div>
+      );
+    }
 
-  if (!notes) {
-    return (
-      <div className="h-full flex items-center justify-center">
-        <Loader2 className="animate-spin h-8 w-8" />
-      </div>
-    );
-  }
-
-  return (
-    <div className="h-full flex">
-      <div className="flex-1 flex flex-col gap-4 pb-4">
-        <div className="flex flex-col gap-4">
-          <div className="flex sm:items-center justify-between flex-col sm:flex-row gap-5">
-            <div>
-              <h1 className="text-3xl font-light tracking-tight">Notes</h1>
-              <p className="text-muted-foreground mt-1 text-xl font-light">
-                Capture and organize your thoughts effortlessly
-              </p>
+    if (notes.length > 0 && filteredAndSortedNotes.length === 0) {
+      return (
+        <div className="flex flex-col items-center justify-center min-h-[400px] p-8 text-center">
+          <div className="relative mb-6">
+            <div className="absolute inset-0 bg-primary/5 blur-xl rounded-full" />
+            <div className="relative p-6 bg-secondary dark:bg-muted/50 backdrop-blur-sm rounded-full ring-1 ring-border/50">
+              <Search className="size-14 text-primary/70" strokeWidth={1.5} />
             </div>
-            <Dialog
-              open={isNewNoteDialogOpen}
-              onOpenChange={setIsNewNoteDialogOpen}
-            >
-              <DialogTrigger asChild>
-                <Button variant="outline" className="dark:bg-muted/50">
-                  <Plus className="h-4 w-4" />
-                  New Note
-                </Button>
-              </DialogTrigger>
-              <DialogContent className="sm:max-w-[625px] max-h-[80vh] sm:max-h-[90vh] overflow-y-auto">
-                <DialogHeader>
-                  <DialogTitle>Create New Note</DialogTitle>
-                </DialogHeader>
-                <div className="grid gap-4 py-4">
-                  <div className="grid gap-2">
-                    <Label htmlFor="title">Title</Label>
-                    <Input
-                      id="title"
-                      placeholder="Enter note title"
-                      value={newNote.title}
-                      onChange={(e) =>
-                        setNewNote({ ...newNote, title: e.target.value })
-                      }
-                    />
-                  </div>
-                  <div className="grid gap-2">
-                    <Label>Content</Label>
-                    <div className="relative">
-                      <Textarea
-                        ref={textareaRef}
-                        placeholder="Type your note content here... (Type '/' for text and list formatting)"
-                        value={newNote.content}
-                        onChange={handleTextareaChange}
-                        onKeyDown={handleTextareaKeyDown}
-                        className="min-h-[200px] resize-none placeholder:text-muted-foreground/60 placeholder:text-sm font-mono"
-                      />
-                      <SlashCommandMenu
-                        isOpen={showSlashCommands}
-                        onClose={() => setShowSlashCommands(false)}
-                        onSelect={handleSlashCommand}
-                        triggerRef={textareaRef}
-                      />
-                    </div>
-                  </div>
-                  <div className="grid gap-2">
-                    <Label>Tags</Label>
-                    <div className="flex flex-wrap gap-2">
-                      {newNote.tags.map((tag) => (
-                        <Badge
-                          key={tag}
-                          variant="outline"
-                          className={cn(
-                            "transition-colors",
-                            getTagColors(tag).bg,
-                            getTagColors(tag).text
-                          )}
-                        >
-                          <div className="flex items-center gap-1.5">
-                            <div
-                              className={cn(
-                                "w-1.5 h-1.5 rounded-full",
-                                getTagColors(tag).dot
-                              )}
-                            />
-                            {tag.charAt(0).toUpperCase() + tag.slice(1)}
-                            <Button
-                              variant="ghost"
-                              size="icon"
-                              className="h-4 w-4 ml-1 hover:bg-transparent"
-                              onClick={() =>
-                                setNewNote({
-                                  ...newNote,
-                                  tags: newNote.tags.filter((t) => t !== tag),
-                                })
-                              }
-                            >
-                              <X className="h-3 w-3" />
-                            </Button>
-                          </div>
-                        </Badge>
-                      ))}
-                    </div>
-                    {isAddingCustomTag ? (
-                      <div className="flex gap-2">
-                        <Input
-                          placeholder="Enter custom tag"
-                          value={newCustomTag}
-                          onChange={(e) => setNewCustomTag(e.target.value)}
-                        />
-                        <Button
-                          variant="outline"
-                          size="icon"
-                          onClick={() => setIsAddingCustomTag(false)}
-                        >
-                          <X className="h-4 w-4" />
-                        </Button>
-                        <Button
-                          disabled={newCustomTag.length < 2}
-                          onClick={() => {
-                            if (newCustomTag) {
-                              setNewNote({
-                                ...newNote,
-                                tags: [
-                                  ...newNote.tags,
-                                  newCustomTag.toLowerCase(),
-                                ],
-                              });
-                              setNewCustomTag("");
-                              setIsAddingCustomTag(false);
-                            }
-                          }}
-                        >
-                          Add
-                        </Button>
-                      </div>
-                    ) : (
-                      <TagSelect
-                        selectedTags={newNote.tags}
-                        onTagSelect={(tag) => {
-                          setNewNote({
-                            ...newNote,
-                            tags: [...newNote.tags, tag],
-                          });
-                        }}
-                      />
-                    )}
-                  </div>
-                </div>
-                <DialogFooter>
-                  <Button
-                    variant="outline"
-                    onClick={() => {
-                      setIsNewNoteDialogOpen(false);
-                      setNewNote({ title: "", content: "", tags: [] });
-                      setIsAddingCustomTag(false);
-                      setNewCustomTag("");
-                    }}
-                  >
-                    Cancel
-                  </Button>
-                  <Button
-                    disabled={!newNote.title.trim() || isCreating}
-                    onClick={() => {
-                      handleCreateNote(newNote);
-                      setNewNote({ title: "", content: "", tags: [] });
-                      setIsAddingCustomTag(false);
-                      setNewCustomTag("");
-                    }}
-                  >
-                    {isCreating ? (
-                      <>
-                        <Loader2 className="h-4 w-4 animate-spin" />
-                        Creating...
-                      </>
-                    ) : (
-                      "Create Note"
-                    )}
-                  </Button>
-                </DialogFooter>
-              </DialogContent>
-            </Dialog>
           </div>
-          <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between w-full">
-            <div className="flex flex-col gap-4 lg:flex-row lg:items-center w-full lg:w-auto">
-              <div className="relative w-full lg:w-[300px]">
-                <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
-                <Input
-                  placeholder="Search notes..."
-                  value={searchQuery}
-                  onChange={(e) => setSearchQuery(e.target.value)}
-                  className="pl-9"
-                />
-              </div>
-              <Select
-                value={sortBy}
-                onValueChange={(value: SortOption) => setSortBy(value)}
-              >
-                <SelectTrigger className="w-full lg:w-[280px]">
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectGroup>
-                    <SelectLabel>Date</SelectLabel>
-                    <SelectItem value="date-desc">Newest first</SelectItem>
-                    <SelectItem value="date-asc">Oldest first</SelectItem>
-                    <SelectItem value="updated-desc">
-                      Recently updated
-                    </SelectItem>
-                  </SelectGroup>
-                  <SelectGroup>
-                    <SelectLabel>Name</SelectLabel>
-                    <SelectItem value="title-asc">Title A-Z</SelectItem>
-                    <SelectItem value="title-desc">Title Z-A</SelectItem>
-                  </SelectGroup>
-                  <SelectGroup>
-                    <SelectLabel>Other</SelectLabel>
-                    <SelectItem value="length-asc">Shortest first</SelectItem>
-                    <SelectItem value="length-desc">Longest first</SelectItem>
-                  </SelectGroup>
-                </SelectContent>
-              </Select>
-            </div>
-            <div className="flex items-center gap-1 border rounded-md w-full lg:w-auto">
-              <Button
-                variant={view === "grid" ? "secondary" : "ghost"}
-                onClick={() => setView("grid")}
-                className="flex items-center gap-2 flex-1 lg:flex-initial"
-              >
-                <Grid className="h-4 w-4" />
-                Grid
-              </Button>
-              <Button
-                variant={view === "list" ? "secondary" : "ghost"}
-                onClick={() => setView("list")}
-                className="flex items-center gap-2 flex-1 lg:flex-initial"
-              >
-                <List className="h-4 w-4" />
-                List
-              </Button>
-              <Button
-                variant={view === "kanban" ? "secondary" : "ghost"}
-                onClick={() => setView("kanban")}
-                className="flex items-center gap-2 flex-1 lg:flex-initial"
-              >
-                <Columns className="h-4 w-4" />
-                Kanban
-              </Button>
-            </div>
+          <div className="space-y-3 max-w-xl">
+            <h3 className="text-2xl font-semibold tracking-tight">
+              No notes found
+            </h3>
+            <p className="text-muted-foreground text-sm leading-relaxed">
+              {searchQuery && (
+                <span>
+                  Search Term:{" "}
+                  <b>
+                    <q>{searchQuery}</q>
+                  </b>
+                  <br />
+                </span>
+              )}
+              <span className="block mt-2">
+                Try adjusting your search criteria to find what you&apos;re
+                looking for.
+              </span>
+            </p>
           </div>
         </div>
-        <div className="flex-1 overflow-auto">
-          {view === "grid" && (
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-              {pinnedNotes.length > 0 && (
-                <div className="col-span-full mb-6">
-                  <h2 className="text-sm font-semibold text-muted-foreground mb-3">
-                    Pinned Notes
-                  </h2>
-                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                    {pinnedNotes.map((note) => (
-                      <NoteCard
-                        key={note._id}
-                        note={{
-                          id: note._id,
-                          title: note.title,
-                          content: note.content,
-                          tags: note.tags,
-                          color: note.color,
-                          isPinned: note.isPinned,
-                          createdAt: new Date(note.createdAt),
-                          updatedAt: note.updatedAt
-                            ? new Date(note.updatedAt)
-                            : null,
-                          length: note.content.length,
-                        }}
-                        onPin={() => handlePinNote(note._id as Id<"notes">)}
-                        onDelete={() =>
-                          handleDeleteNote(note._id as Id<"notes">)
-                        }
-                        handleUpdateNote={handleUpdateNote}
-                        isUpdating={isUpdating}
-                        isDeleting={isDeleting}
-                      />
-                    ))}
-                  </div>
-                </div>
+      );
+    }
+
+    if (
+      notes.length === 0 ||
+      (searchQuery && filteredAndSortedNotes.length === 0)
+    ) {
+      return (
+        <div className="flex flex-col items-center justify-center min-h-[400px] p-8 text-center">
+          <div className="relative mb-6">
+            <div className="absolute inset-0 bg-primary/5 blur-xl rounded-full" />
+            <div className="relative p-6 bg-secondary dark:bg-muted/50 backdrop-blur-sm rounded-full ring-1 ring-border/50">
+              {searchQuery ? (
+                <Search className="size-14 text-primary/70" strokeWidth={1.5} />
+              ) : (
+                <ClipboardX
+                  className="size-14 text-primary/70"
+                  strokeWidth={1.5}
+                />
               )}
-              <div className="col-span-full">
-                {pinnedNotes.length > 0 && (
-                  <h2 className="text-sm font-semibold text-muted-foreground mb-3">
-                    Other Notes
-                  </h2>
-                )}
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
-                  {unpinnedNotes.map((note) => (
-                    <NoteCard
-                      key={note._id}
-                      note={{
-                        id: note._id,
-                        title: note.title,
-                        content: note.content,
-                        tags: note.tags,
-                        color: note.color,
-                        isPinned: note.isPinned,
-                        createdAt: new Date(note.createdAt),
-                        updatedAt: note.updatedAt
-                          ? new Date(note.updatedAt)
-                          : null,
-                        length: note.content.length,
-                      }}
-                      onPin={() => handlePinNote(note._id as Id<"notes">)}
-                      onDelete={() => handleDeleteNote(note._id as Id<"notes">)}
-                      handleUpdateNote={handleUpdateNote}
-                      isUpdating={isUpdating}
-                      isDeleting={isDeleting}
-                    />
-                  ))}
-                </div>
-              </div>
             </div>
-          )}
-          {view === "list" && (
-            <div>
-              {pinnedNotes.length > 0 && (
-                <div className="mb-6">
-                  <h2 className="text-sm font-semibold text-muted-foreground mb-3">
-                    Pinned Notes
-                  </h2>
-                  <div className="grid grid-cols-1 gap-4">
-                    {pinnedNotes.map((note) => (
-                      <NoteCard
-                        key={note._id}
-                        note={{
-                          id: note._id,
-                          title: note.title,
-                          content: note.content,
-                          tags: note.tags,
-                          color: note.color,
-                          isPinned: note.isPinned,
-                          createdAt: new Date(note.createdAt),
-                          updatedAt: note.updatedAt
-                            ? new Date(note.updatedAt)
-                            : null,
-                          length: note.content.length,
-                        }}
-                        onPin={() => handlePinNote(note._id as Id<"notes">)}
-                        onDelete={() =>
-                          handleDeleteNote(note._id as Id<"notes">)
-                        }
-                        handleUpdateNote={handleUpdateNote}
-                        isUpdating={isUpdating}
-                        isDeleting={isDeleting}
-                      />
-                    ))}
-                  </div>
-                </div>
+          </div>
+          <div className="space-y-3 max-w-xl">
+            <h3 className="text-2xl font-semibold tracking-tight">
+              {searchQuery ? "No Notes Found" : "No Notes Yet"}
+            </h3>
+            <p className="text-muted-foreground text-sm leading-relaxed">
+              {searchQuery ? (
+                <>
+                  <span>
+                    Search Term:{" "}
+                    <b>
+                      <q>{searchQuery}</q>
+                    </b>
+                  </span>
+                  <span className="block mt-2">
+                    Try adjusting your search criteria to find what you&apos;re
+                    looking for.
+                  </span>
+                </>
+              ) : (
+                <>
+                  Ready to get organized? Start by creating your first note
+                  using the
+                  <b className="font-semibold text-primary"> New Note </b>
+                  button above.
+                </>
               )}
-              <div>
-                {pinnedNotes.length > 0 && (
-                  <h2 className="text-sm font-semibold text-muted-foreground mb-3">
-                    Other Notes
-                  </h2>
-                )}
-                <div className="grid grid-cols-1 gap-4">
-                  {unpinnedNotes.map((note) => (
-                    <NoteCard
-                      key={note._id}
-                      note={{
-                        id: note._id,
-                        title: note.title,
-                        content: note.content,
-                        tags: note.tags,
-                        color: note.color,
-                        isPinned: note.isPinned,
-                        createdAt: new Date(note.createdAt),
-                        updatedAt: note.updatedAt
-                          ? new Date(note.updatedAt)
-                          : null,
-                        length: note.content.length,
-                      }}
-                      onPin={() => handlePinNote(note._id as Id<"notes">)}
-                      onDelete={() => handleDeleteNote(note._id as Id<"notes">)}
-                      handleUpdateNote={handleUpdateNote}
-                      isUpdating={isUpdating}
-                      isDeleting={isDeleting}
-                    />
-                  ))}
-                </div>
-              </div>
-            </div>
-          )}
-          {view === "kanban" && (
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <div className="space-y-4">
-                <h2 className="text-sm font-semibold text-muted-foreground">
+            </p>
+          </div>
+        </div>
+      );
+    }
+
+    return (
+      <div className="flex-1 overflow-auto">
+        {view === "grid" && (
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+            {pinnedNotes.length > 0 && (
+              <div className="col-span-full mb-6">
+                <h2 className="text-sm font-semibold text-muted-foreground mb-3">
                   Pinned Notes
                 </h2>
-                <div className="space-y-4">
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
                   {pinnedNotes.map((note) => (
                     <NoteCard
                       key={note._id}
@@ -1113,12 +814,50 @@ export default function Notes() {
                   ))}
                 </div>
               </div>
-              <div className="space-y-4">
-                <h2 className="text-sm font-semibold text-muted-foreground">
+            )}
+            <div className="col-span-full">
+              {pinnedNotes.length > 0 && (
+                <h2 className="text-sm font-semibold text-muted-foreground mb-3">
                   Other Notes
                 </h2>
-                <div className="space-y-4">
-                  {unpinnedNotes.map((note) => (
+              )}
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 pt-2">
+                {unpinnedNotes.map((note) => (
+                  <NoteCard
+                    key={note._id}
+                    note={{
+                      id: note._id,
+                      title: note.title,
+                      content: note.content,
+                      tags: note.tags,
+                      color: note.color,
+                      isPinned: note.isPinned,
+                      createdAt: new Date(note.createdAt),
+                      updatedAt: note.updatedAt
+                        ? new Date(note.updatedAt)
+                        : null,
+                      length: note.content.length,
+                    }}
+                    onPin={() => handlePinNote(note._id as Id<"notes">)}
+                    onDelete={() => handleDeleteNote(note._id as Id<"notes">)}
+                    handleUpdateNote={handleUpdateNote}
+                    isUpdating={isUpdating}
+                    isDeleting={isDeleting}
+                  />
+                ))}
+              </div>
+            </div>
+          </div>
+        )}
+        {view === "list" && (
+          <div>
+            {pinnedNotes.length > 0 && (
+              <div className="mb-6">
+                <h2 className="text-sm font-semibold text-muted-foreground mb-3">
+                  Pinned Notes
+                </h2>
+                <div className="grid grid-cols-1 gap-4">
+                  {pinnedNotes.map((note) => (
                     <NoteCard
                       key={note._id}
                       note={{
@@ -1143,10 +882,346 @@ export default function Notes() {
                   ))}
                 </div>
               </div>
+            )}
+            <div>
+              {pinnedNotes.length > 0 && (
+                <h2 className="text-sm font-semibold text-muted-foreground mb-3">
+                  Other Notes
+                </h2>
+              )}
+              <div className="grid grid-cols-1 gap-4">
+                {unpinnedNotes.map((note) => (
+                  <NoteCard
+                    key={note._id}
+                    note={{
+                      id: note._id,
+                      title: note.title,
+                      content: note.content,
+                      tags: note.tags,
+                      color: note.color,
+                      isPinned: note.isPinned,
+                      createdAt: new Date(note.createdAt),
+                      updatedAt: note.updatedAt
+                        ? new Date(note.updatedAt)
+                        : null,
+                      length: note.content.length,
+                    }}
+                    onPin={() => handlePinNote(note._id as Id<"notes">)}
+                    onDelete={() => handleDeleteNote(note._id as Id<"notes">)}
+                    handleUpdateNote={handleUpdateNote}
+                    isUpdating={isUpdating}
+                    isDeleting={isDeleting}
+                  />
+                ))}
+              </div>
             </div>
-          )}
+          </div>
+        )}
+        {view === "kanban" && (
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div className="space-y-4">
+              <h2 className="text-sm font-semibold text-muted-foreground">
+                Pinned Notes
+              </h2>
+              <div className="space-y-4">
+                {pinnedNotes.map((note) => (
+                  <NoteCard
+                    key={note._id}
+                    note={{
+                      id: note._id,
+                      title: note.title,
+                      content: note.content,
+                      tags: note.tags,
+                      color: note.color,
+                      isPinned: note.isPinned,
+                      createdAt: new Date(note.createdAt),
+                      updatedAt: note.updatedAt
+                        ? new Date(note.updatedAt)
+                        : null,
+                      length: note.content.length,
+                    }}
+                    onPin={() => handlePinNote(note._id as Id<"notes">)}
+                    onDelete={() => handleDeleteNote(note._id as Id<"notes">)}
+                    handleUpdateNote={handleUpdateNote}
+                    isUpdating={isUpdating}
+                    isDeleting={isDeleting}
+                  />
+                ))}
+              </div>
+            </div>
+            <div className="space-y-4">
+              <h2 className="text-sm font-semibold text-muted-foreground">
+                Other Notes
+              </h2>
+              <div className="space-y-4">
+                {unpinnedNotes.map((note) => (
+                  <NoteCard
+                    key={note._id}
+                    note={{
+                      id: note._id,
+                      title: note.title,
+                      content: note.content,
+                      tags: note.tags,
+                      color: note.color,
+                      isPinned: note.isPinned,
+                      createdAt: new Date(note.createdAt),
+                      updatedAt: note.updatedAt
+                        ? new Date(note.updatedAt)
+                        : null,
+                      length: note.content.length,
+                    }}
+                    onPin={() => handlePinNote(note._id as Id<"notes">)}
+                    onDelete={() => handleDeleteNote(note._id as Id<"notes">)}
+                    handleUpdateNote={handleUpdateNote}
+                    isUpdating={isUpdating}
+                    isDeleting={isDeleting}
+                  />
+                ))}
+              </div>
+            </div>
+          </div>
+        )}
+      </div>
+    );
+  };
+
+  return (
+    <div className="pb-2 space-y-4 md:space-y-2">
+      <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+        <div>
+          <h1 className="text-3xl font-light tracking-tight">Notes</h1>
+          <p className="text-muted-foreground mt-1 text-xl font-light">
+            Capture and organize your thoughts effortlessly
+          </p>
+        </div>
+        <Dialog
+          open={isNewNoteDialogOpen}
+          onOpenChange={setIsNewNoteDialogOpen}
+        >
+          <DialogTrigger asChild>
+            <Button variant="outline" className="dark:bg-muted/50">
+              <Plus className="h-4 w-4" />
+              New Note
+            </Button>
+          </DialogTrigger>
+          <DialogContent className="sm:max-w-[625px] max-h-[80vh] sm:max-h-[90vh] overflow-y-auto">
+            <DialogHeader>
+              <DialogTitle>Create New Note</DialogTitle>
+            </DialogHeader>
+            <div className="grid gap-4 py-4">
+              <div className="grid gap-2">
+                <Label htmlFor="title">Title</Label>
+                <Input
+                  id="title"
+                  placeholder="Enter note title"
+                  value={newNote.title}
+                  onChange={(e) =>
+                    setNewNote({ ...newNote, title: e.target.value })
+                  }
+                />
+              </div>
+              <div className="grid gap-2">
+                <Label>Content</Label>
+                <div className="relative">
+                  <Textarea
+                    ref={textareaRef}
+                    placeholder="Type your note content here... (Type '/' for text and list formatting)"
+                    value={newNote.content}
+                    onChange={handleTextareaChange}
+                    onKeyDown={handleTextareaKeyDown}
+                    className="min-h-[200px] resize-none placeholder:text-muted-foreground/60 placeholder:text-sm font-mono"
+                  />
+                  <SlashCommandMenu
+                    isOpen={showSlashCommands}
+                    onClose={() => setShowSlashCommands(false)}
+                    onSelect={handleSlashCommand}
+                    triggerRef={textareaRef}
+                  />
+                </div>
+              </div>
+              <div className="grid gap-2">
+                <Label>Tags</Label>
+                <div className="flex flex-wrap gap-2">
+                  {newNote.tags.map((tag) => (
+                    <Badge
+                      key={tag}
+                      variant="outline"
+                      className={cn(
+                        "transition-colors",
+                        getTagColors(tag).bg,
+                        getTagColors(tag).text
+                      )}
+                    >
+                      <div className="flex items-center gap-1.5">
+                        <div
+                          className={cn(
+                            "w-1.5 h-1.5 rounded-full",
+                            getTagColors(tag).dot
+                          )}
+                        />
+                        {tag.charAt(0).toUpperCase() + tag.slice(1)}
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          className="h-4 w-4 ml-1 hover:bg-transparent"
+                          onClick={() =>
+                            setNewNote({
+                              ...newNote,
+                              tags: newNote.tags.filter((t) => t !== tag),
+                            })
+                          }
+                        >
+                          <X className="h-3 w-3" />
+                        </Button>
+                      </div>
+                    </Badge>
+                  ))}
+                </div>
+                {isAddingCustomTag ? (
+                  <div className="flex gap-2">
+                    <Input
+                      placeholder="Enter custom tag"
+                      value={newCustomTag}
+                      onChange={(e) => setNewCustomTag(e.target.value)}
+                    />
+                    <Button
+                      variant="outline"
+                      size="icon"
+                      onClick={() => setIsAddingCustomTag(false)}
+                    >
+                      <X className="h-4 w-4" />
+                    </Button>
+                    <Button
+                      disabled={newCustomTag.length < 2}
+                      onClick={() => {
+                        if (newCustomTag) {
+                          setNewNote({
+                            ...newNote,
+                            tags: [...newNote.tags, newCustomTag.toLowerCase()],
+                          });
+                          setNewCustomTag("");
+                          setIsAddingCustomTag(false);
+                        }
+                      }}
+                    >
+                      Add
+                    </Button>
+                  </div>
+                ) : (
+                  <TagSelect
+                    selectedTags={newNote.tags}
+                    onTagSelect={(tag) => {
+                      setNewNote({
+                        ...newNote,
+                        tags: [...newNote.tags, tag],
+                      });
+                    }}
+                  />
+                )}
+              </div>
+            </div>
+            <DialogFooter>
+              <Button
+                variant="outline"
+                onClick={() => {
+                  setIsNewNoteDialogOpen(false);
+                  setNewNote({ title: "", content: "", tags: [] });
+                  setIsAddingCustomTag(false);
+                  setNewCustomTag("");
+                }}
+              >
+                Cancel
+              </Button>
+              <Button
+                disabled={!newNote.title.trim() || isCreating}
+                onClick={() => {
+                  handleCreateNote(newNote);
+                  setNewNote({ title: "", content: "", tags: [] });
+                  setIsAddingCustomTag(false);
+                  setNewCustomTag("");
+                }}
+              >
+                {isCreating ? (
+                  <>
+                    <Loader2 className="h-4 w-4 animate-spin" />
+                    Creating...
+                  </>
+                ) : (
+                  "Create Note"
+                )}
+              </Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
+      </div>
+
+      <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between w-full">
+        <div className="flex flex-col gap-4 lg:flex-row lg:items-center w-full lg:w-auto">
+          <div className="relative w-full lg:w-[300px]">
+            <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+            <Input
+              placeholder="Search notes..."
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              className="pl-9"
+            />
+          </div>
+          <Select
+            value={sortBy}
+            onValueChange={(value: SortOption) => setSortBy(value)}
+          >
+            <SelectTrigger className="w-full lg:w-[280px]">
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectGroup>
+                <SelectLabel>Date</SelectLabel>
+                <SelectItem value="date-desc">Newest first</SelectItem>
+                <SelectItem value="date-asc">Oldest first</SelectItem>
+                <SelectItem value="updated-desc">Recently updated</SelectItem>
+              </SelectGroup>
+              <SelectGroup>
+                <SelectLabel>Name</SelectLabel>
+                <SelectItem value="title-asc">Title A-Z</SelectItem>
+                <SelectItem value="title-desc">Title Z-A</SelectItem>
+              </SelectGroup>
+              <SelectGroup>
+                <SelectLabel>Other</SelectLabel>
+                <SelectItem value="length-asc">Shortest first</SelectItem>
+                <SelectItem value="length-desc">Longest first</SelectItem>
+              </SelectGroup>
+            </SelectContent>
+          </Select>
+        </div>
+        <div className="flex items-center gap-2">
+          <Button
+            variant={view === "grid" ? "secondary" : "ghost"}
+            onClick={() => setView("grid")}
+            className="flex items-center gap-2 flex-1 lg:flex-initial"
+          >
+            <Grid className="h-4 w-4" />
+            Grid
+          </Button>
+          <Button
+            variant={view === "list" ? "secondary" : "ghost"}
+            onClick={() => setView("list")}
+            className="flex items-center gap-2 flex-1 lg:flex-initial"
+          >
+            <List className="h-4 w-4" />
+            List
+          </Button>
+          <Button
+            variant={view === "kanban" ? "secondary" : "ghost"}
+            onClick={() => setView("kanban")}
+            className="flex items-center gap-2 flex-1 lg:flex-initial"
+          >
+            <Columns className="h-4 w-4" />
+            Kanban
+          </Button>
         </div>
       </div>
+
+      {renderContent()}
     </div>
   );
 }
