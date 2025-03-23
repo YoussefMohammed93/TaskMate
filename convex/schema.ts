@@ -45,4 +45,16 @@ export default defineSchema({
       })
     ),
   }).index("by_user", ["userId"]),
+
+  notes: defineTable({
+    title: v.string(),
+    content: v.string(),
+    tags: v.array(v.string()),
+    color: v.string(),
+    isPinned: v.boolean(),
+    folderId: v.optional(v.string()),
+    userId: v.string(),
+    createdAt: v.string(),
+    updatedAt: v.optional(v.string()),
+  }).index("by_user", ["userId"]),
 });

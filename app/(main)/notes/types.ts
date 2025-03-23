@@ -13,7 +13,7 @@ export interface Note {
   color: string;
   isPinned: boolean;
   createdAt: Date;
-  updatedAt?: Date;
+  updatedAt: Date | null;
   length: number;
 }
 

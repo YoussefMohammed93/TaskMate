@@ -1,4 +1,3 @@
-/* eslint-disable @typescript-eslint/no-unused-vars */
 "use client";
 
 import {
@@ -13,11 +12,9 @@ import {
   X,
   Pencil,
   Columns,
-  Inbox,
-  Settings,
   Loader2,
-  Trash,
 } from "lucide-react";
+import { toast } from "sonner";
 import {
   Select,
   SelectContent,
@@ -55,20 +52,24 @@ import { Card } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
+import { api } from "@/convex/_generated/api";
 import { Button } from "@/components/ui/button";
 import { useIsMobile } from "@/hooks/use-mobile";
+import { Id } from "@/convex/_generated/dataModel";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useState, useEffect, useMemo } from "react";
+import { useMutation, useQuery } from "convex/react";
 
 interface Note {
   id: string;
   title: string;
   content: string;
-  folderId: string | null;
   tags: string[];
   color: string;
   isPinned: boolean;
   createdAt: Date;
+  updatedAt: Date | null;
+  length: number;
 }
 
 interface TagColors {
@@ -128,91 +129,12 @@ const getTagColors = (tag: string) => {
   );
 };
 
-const INITIAL_NOTES: Note[] = [
-  {
-    id: "1",
-    title: "Project Ideas",
-    content:
-      "1. Build a task management app\n2. Create a recipe sharing platform\n3. Develop a fitness tracking system",
-    tags: ["ideas", "projects", "planning"],
-    color: "blue-500",
-    isPinned: true,
-    createdAt: new Date("2024-02-15"),
-    folderId: null,
-  },
-  {
-    id: "2",
-    title: "Meeting Notes - Team Sync",
-    content:
-      "Discussed upcoming features:\n- User authentication\n- Dark mode\n- Mobile responsiveness",
-    tags: ["meeting", "team", "development"],
-    color: "green-500",
-    isPinned: true,
-    createdAt: new Date("2024-02-18"),
-    folderId: null,
-  },
-  {
-    id: "3",
-    title: "Learning Resources",
-    content:
-      "Useful links for React:\n- React docs\n- Next.js tutorial\n- TypeScript handbook",
-    tags: ["learning", "resources", "development"],
-    color: "purple-500",
-    isPinned: false,
-    createdAt: new Date("2024-02-17"),
-    folderId: null,
-  },
-  {
-    id: "4",
-    title: "Weekly Goals",
-    content:
-      "Goals for this week:\n1. Complete authentication feature\n2. Write documentation\n3. Code review",
-    tags: ["goals", "planning"],
-    color: "yellow-500",
-    isPinned: false,
-    createdAt: new Date("2024-02-19"),
-    folderId: null,
-  },
-  {
-    id: "5",
-    title: "Bug Fixes",
-    content:
-      "Known issues:\n- Login form validation\n- Mobile menu alignment\n- Performance optimization needed",
-    tags: ["bugs", "development"],
-    color: "red-500",
-    isPinned: false,
-    createdAt: new Date("2024-02-16"),
-    folderId: null,
-  },
-  {
-    id: "6",
-    title: "Feature Ideas",
-    content:
-      "Future improvements:\n- Email notifications\n- Calendar integration\n- Custom themes",
-    tags: ["ideas", "features"],
-    color: "pink-500",
-    isPinned: false,
-    createdAt: new Date("2024-02-14"),
-    folderId: null,
-  },
-];
-
-const folderColors = [
-  { value: "#4CAF50", label: "Green" },
-  { value: "#2196F3", label: "Blue" },
-  { value: "#9C27B0", label: "Purple" },
-  { value: "#F44336", label: "Red" },
-  { value: "#FF9800", label: "Orange" },
-  { value: "#795548", label: "Brown" },
-];
-
 export default function Notes() {
   const [mounted, setMounted] = useState(false);
   const [view, setView] = useState<"grid" | "list" | "kanban">("grid");
   const [searchQuery, setSearchQuery] = useState("");
   const [sortBy, setSortBy] = useState<SortOption>("date-desc");
   const [isNewNoteDialogOpen, setIsNewNoteDialogOpen] = useState(false);
-  const [notes, setNotes] = useState<Note[]>(INITIAL_NOTES);
   const [newNote, setNewNote] = useState({
     title: "",
     content: "",
@@ -220,8 +142,15 @@ export default function Notes() {
   });
   const [isAddingCustomTag, setIsAddingCustomTag] = useState(false);
   const [newCustomTag, setNewCustomTag] = useState("");
-  const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
-  const [editingNote, setEditingNote] = useState<Note | null>(null);
+  const [, setIsEditDialogOpen] = useState(false);
+  const [, setEditingNote] = useState<Note | null>(null);
+
+  const notesQuery = useQuery(api.notes.list);
+  const notes = useMemo(() => notesQuery || [], [notesQuery]);
+  const createNote = useMutation(api.notes.create);
+  const updateNote = useMutation(api.notes.update);
+  const togglePin = useMutation(api.notes.togglePin);
+  const deleteNote = useMutation(api.notes.remove);
 
   useEffect(() => {
     const savedView = localStorage.getItem("notesView");
@@ -253,47 +182,114 @@ export default function Notes() {
     []
   );
 
-  const handleCreateNote = (note: {
+  const handleCreateNote = async (note: {
     title: string;
     content: string;
     tags: string[];
   }) => {
-    const newNote = {
-      id: Math.random().toString(36).substr(2, 9),
-      title: note.title,
-      content: note.content || JSON.stringify([]), // Default to empty array if no content
-      tags: note.tags,
-      createdAt: new Date(),
-      isPinned: false,
-      color: "blue-500",
-      folderId: null,
-    };
+    const toastId = toast.loading("Creating note...");
 
-    setNotes((prev) => [...prev, newNote]);
-    setIsNewNoteDialogOpen(false);
+    try {
+      await createNote({
+        title: note.title,
+        content: note.content || JSON.stringify([]),
+        tags: note.tags,
+        color: "blue-500",
+        isPinned: false,
+      });
+
+      toast.success("Note created successfully", {
+        id: toastId,
+        description: `"${note.title}" has been created.`,
+      });
+
+      setNewNote({
+        title: "",
+        content: "",
+        tags: [],
+      });
+      setIsAddingCustomTag(false);
+      setNewCustomTag("");
+      setIsNewNoteDialogOpen(false);
+    } catch (error) {
+      console.error("Failed to create note:", error);
+      toast.error("Failed to create note", {
+        id: toastId,
+        description: "Please try again later.",
+      });
+    }
   };
 
-  const togglePin = (noteId: string) => {
-    setNotes(
-      notes.map((note) =>
-        note.id === noteId ? { ...note, isPinned: !note.isPinned } : note
-      )
-    );
+  const handlePinNote = async (noteId: Id<"notes">) => {
+    const toastId = toast.loading("Updating note...");
+
+    try {
+      await togglePin({ id: noteId });
+
+      toast.success("Note updated successfully", {
+        id: toastId,
+        description: "Pin status has been updated.",
+      });
+    } catch (error) {
+      console.error("Failed to update note:", error);
+      toast.error("Failed to update note", {
+        id: toastId,
+        description: "Please try again later.",
+      });
+    }
   };
 
-  const deleteNote = (noteId: string) => {
-    setNotes(notes.filter((note) => note.id !== noteId));
+  const handleDeleteNote = async (noteId: Id<"notes">) => {
+    const toastId = toast.loading("Deleting note...");
+
+    try {
+      await deleteNote({ id: noteId });
+
+      toast.success("Note deleted successfully", {
+        id: toastId,
+        description: "The note has been deleted.",
+      });
+    } catch (error) {
+      console.error("Failed to delete note:", error);
+      toast.error("Failed to delete note", {
+        id: toastId,
+        description: "Please try again later.",
+      });
+    }
   };
 
-  const handleUpdateNote = (updatedNote: Note) => {
-    setNotes(
-      notes.map((note) => (note.id === updatedNote.id ? updatedNote : note))
-    );
-    setIsEditDialogOpen(false);
-    setEditingNote(null);
+  const handleUpdateNote = async (note: Note) => {
+    const toastId = toast.loading(`Updating "${note.title}"...`);
+
+    try {
+      await updateNote({
+        id: note.id as Id<"notes">,
+        title: note.title,
+        content: note.content,
+        tags: note.tags,
+        color: note.color,
+        isPinned: note.isPinned,
+      });
+
+      toast.success("Note updated successfully", {
+        id: toastId,
+        description: `"${note.title}" has been updated.`,
+      });
+
+      setIsEditDialogOpen(false);
+      setEditingNote(null);
+    } catch (error) {
+      console.error("Failed to update note:", error);
+      toast.error("Failed to update note", {
+        id: toastId,
+        description: "Please try again later.",
+      });
+    }
   };
 
   const filteredAndSortedNotes = useMemo(() => {
+    if (!notes) return [];
+
     const filtered = notes.filter((note) => {
       const matchesSearch =
         note.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
@@ -308,9 +304,13 @@ export default function Notes() {
     return filtered.sort((a, b) => {
       switch (sortBy) {
         case "date-desc":
-          return b.createdAt.getTime() - a.createdAt.getTime();
+          return (
+            new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
+          );
         case "date-asc":
-          return a.createdAt.getTime() - b.createdAt.getTime();
+          return (
+            new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime()
+          );
         case "title-asc":
           return a.title.localeCompare(b.title);
         case "title-desc":
@@ -320,7 +320,10 @@ export default function Notes() {
         case "length-desc":
           return b.content.length - a.content.length;
         case "updated-desc":
-          return b.createdAt.getTime() - a.createdAt.getTime();
+          return (
+            new Date(b.updatedAt || b.createdAt).getTime() -
+            new Date(a.updatedAt || a.createdAt).getTime()
+          );
         default:
           return 0;
       }
@@ -338,6 +341,14 @@ export default function Notes() {
   );
 
   if (!mounted) {
+    return (
+      <div className="h-full flex items-center justify-center">
+        <Loader2 className="animate-spin h-8 w-8" />
+      </div>
+    );
+  }
+
+  if (!notes) {
     return (
       <div className="h-full flex items-center justify-center">
         <Loader2 className="animate-spin h-8 w-8" />
@@ -581,10 +592,25 @@ export default function Notes() {
                   <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
                     {pinnedNotes.map((note) => (
                       <NoteCard
-                        key={note.id}
-                        note={note}
-                        onPin={() => togglePin(note.id)}
-                        onDelete={() => deleteNote(note.id)}
+                        key={note._id}
+                        note={{
+                          id: note._id,
+                          title: note.title,
+                          content: note.content,
+                          tags: note.tags,
+                          color: note.color,
+                          isPinned: note.isPinned,
+                          createdAt: new Date(note.createdAt),
+                          updatedAt: note.updatedAt
+                            ? new Date(note.updatedAt)
+                            : null,
+                          length: note.content.length,
+                        }}
+                        onPin={() => handlePinNote(note._id as Id<"notes">)}
+                        onDelete={() =>
+                          handleDeleteNote(note._id as Id<"notes">)
+                        }
+                        handleUpdateNote={handleUpdateNote}
                       />
                     ))}
                   </div>
@@ -599,10 +625,23 @@ export default function Notes() {
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
                   {unpinnedNotes.map((note) => (
                     <NoteCard
-                      key={note.id}
-                      note={note}
-                      onPin={() => togglePin(note.id)}
-                      onDelete={() => deleteNote(note.id)}
+                      key={note._id}
+                      note={{
+                        id: note._id,
+                        title: note.title,
+                        content: note.content,
+                        tags: note.tags,
+                        color: note.color,
+                        isPinned: note.isPinned,
+                        createdAt: new Date(note.createdAt),
+                        updatedAt: note.updatedAt
+                          ? new Date(note.updatedAt)
+                          : null,
+                        length: note.content.length,
+                      }}
+                      onPin={() => handlePinNote(note._id as Id<"notes">)}
+                      onDelete={() => handleDeleteNote(note._id as Id<"notes">)}
+                      handleUpdateNote={handleUpdateNote}
                     />
                   ))}
                 </div>
@@ -619,10 +658,25 @@ export default function Notes() {
                   <div className="grid grid-cols-1 gap-4">
                     {pinnedNotes.map((note) => (
                       <NoteCard
-                        key={note.id}
-                        note={note}
-                        onPin={() => togglePin(note.id)}
-                        onDelete={() => deleteNote(note.id)}
+                        key={note._id}
+                        note={{
+                          id: note._id,
+                          title: note.title,
+                          content: note.content,
+                          tags: note.tags,
+                          color: note.color,
+                          isPinned: note.isPinned,
+                          createdAt: new Date(note.createdAt),
+                          updatedAt: note.updatedAt
+                            ? new Date(note.updatedAt)
+                            : null,
+                          length: note.content.length,
+                        }}
+                        onPin={() => handlePinNote(note._id as Id<"notes">)}
+                        onDelete={() =>
+                          handleDeleteNote(note._id as Id<"notes">)
+                        }
+                        handleUpdateNote={handleUpdateNote}
                       />
                     ))}
                   </div>
@@ -637,10 +691,23 @@ export default function Notes() {
                 <div className="grid grid-cols-1 gap-4">
                   {unpinnedNotes.map((note) => (
                     <NoteCard
-                      key={note.id}
-                      note={note}
-                      onPin={() => togglePin(note.id)}
-                      onDelete={() => deleteNote(note.id)}
+                      key={note._id}
+                      note={{
+                        id: note._id,
+                        title: note.title,
+                        content: note.content,
+                        tags: note.tags,
+                        color: note.color,
+                        isPinned: note.isPinned,
+                        createdAt: new Date(note.createdAt),
+                        updatedAt: note.updatedAt
+                          ? new Date(note.updatedAt)
+                          : null,
+                        length: note.content.length,
+                      }}
+                      onPin={() => handlePinNote(note._id as Id<"notes">)}
+                      onDelete={() => handleDeleteNote(note._id as Id<"notes">)}
+                      handleUpdateNote={handleUpdateNote}
                     />
                   ))}
                 </div>
@@ -656,10 +723,23 @@ export default function Notes() {
                 <div className="space-y-4">
                   {pinnedNotes.map((note) => (
                     <NoteCard
-                      key={note.id}
-                      note={note}
-                      onPin={() => togglePin(note.id)}
-                      onDelete={() => deleteNote(note.id)}
+                      key={note._id}
+                      note={{
+                        id: note._id,
+                        title: note.title,
+                        content: note.content,
+                        tags: note.tags,
+                        color: note.color,
+                        isPinned: note.isPinned,
+                        createdAt: new Date(note.createdAt),
+                        updatedAt: note.updatedAt
+                          ? new Date(note.updatedAt)
+                          : null,
+                        length: note.content.length,
+                      }}
+                      onPin={() => handlePinNote(note._id as Id<"notes">)}
+                      onDelete={() => handleDeleteNote(note._id as Id<"notes">)}
+                      handleUpdateNote={handleUpdateNote}
                     />
                   ))}
                 </div>
@@ -671,10 +751,23 @@ export default function Notes() {
                 <div className="space-y-4">
                   {unpinnedNotes.map((note) => (
                     <NoteCard
-                      key={note.id}
-                      note={note}
-                      onPin={() => togglePin(note.id)}
-                      onDelete={() => deleteNote(note.id)}
+                      key={note._id}
+                      note={{
+                        id: note._id,
+                        title: note.title,
+                        content: note.content,
+                        tags: note.tags,
+                        color: note.color,
+                        isPinned: note.isPinned,
+                        createdAt: new Date(note.createdAt),
+                        updatedAt: note.updatedAt
+                          ? new Date(note.updatedAt)
+                          : null,
+                        length: note.content.length,
+                      }}
+                      onPin={() => handlePinNote(note._id as Id<"notes">)}
+                      onDelete={() => handleDeleteNote(note._id as Id<"notes">)}
+                      handleUpdateNote={handleUpdateNote}
                     />
                   ))}
                 </div>
@@ -691,9 +784,10 @@ interface NoteCardProps {
   note: Note;
   onPin: () => void;
   onDelete: () => void;
+  handleUpdateNote: (note: Note) => Promise<void>;
 }
 
-function NoteCard({ note, onPin, onDelete }: NoteCardProps) {
+function NoteCard({ note, onPin, onDelete, handleUpdateNote }: NoteCardProps) {
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
   const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
   const [isDetailsSheetOpen, setIsDetailsSheetOpen] = useState(false);
@@ -1001,9 +1095,9 @@ function NoteCard({ note, onPin, onDelete }: NoteCardProps) {
             <Button
               disabled={!editingNote?.title.trim()}
               onClick={() => {
-                // if (editingNote) {
-                //   handleUpdateNote(editingNote);
-                // }
+                if (editingNote) {
+                  handleUpdateNote(editingNote);
+                }
               }}
             >
               Save Changes
