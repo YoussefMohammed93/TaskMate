@@ -131,16 +131,19 @@ export function TagSelect({ selectedTags, onTagSelect }: TagSelectProps) {
 
   return (
     <Select
+      value=""
       onValueChange={(value) => {
         if (value === "custom") {
           setIsAddingCustomTag(true);
         } else {
           const selectedTag = defaultTags.find((tag) => tag.id === value);
-          if (selectedTag) onTagSelect(selectedTag);
+          if (selectedTag) {
+            onTagSelect(selectedTag);
+          }
         }
       }}
     >
-      <SelectTrigger>
+      <SelectTrigger className="focus:ring-0 focus:ring-offset-0">
         <SelectValue placeholder="Add tag" />
       </SelectTrigger>
       <SelectContent>

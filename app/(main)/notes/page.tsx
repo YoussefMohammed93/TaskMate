@@ -3,7 +3,6 @@
 import {
   Search,
   Grid,
-  List,
   Plus,
   Pin,
   MoreVertical,
@@ -13,7 +12,9 @@ import {
   Pencil,
   Columns,
   Loader2,
-  ClipboardX,
+  Clock,
+  RefreshCw,
+  StickyNote,
 } from "lucide-react";
 import { toast } from "sonner";
 import {
@@ -34,13 +35,13 @@ import {
   DialogTrigger,
   DialogFooter,
 } from "@/components/ui/dialog";
-import { cn } from "@/lib/utils";
 import {
   Sheet,
   SheetContent,
   SheetHeader,
   SheetTitle,
 } from "@/components/ui/sheet";
+import { cn } from "@/lib/utils";
 import {
   Command,
   CommandEmpty,
@@ -53,6 +54,7 @@ import {
   PopoverContent,
   PopoverTrigger,
 } from "@/components/ui/popover";
+import { format } from "date-fns";
 import { SortOption } from "./types";
 import {
   DropdownMenu,
@@ -71,6 +73,7 @@ import { Id } from "@/convex/_generated/dataModel";
 import { Textarea } from "@/components/ui/textarea";
 import { useMutation, useQuery } from "convex/react";
 import { useState, useEffect, useMemo, useRef } from "react";
+import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 
 interface Note {
   id: string;
@@ -315,8 +318,8 @@ function SlashCommandMenu({
         className="w-64 p-0"
         align="start"
         side="bottom"
-        sideOffset={-30}
-        alignOffset={-20}
+        sideOffset={0}
+        alignOffset={0}
       >
         <Command shouldFilter={false}>
           <CommandInput
@@ -343,10 +346,6 @@ function SlashCommandMenu({
                   <command.icon className="h-4 w-4 text-muted-foreground" />
                   <span className="font-medium">{command.label}</span>
                 </div>
-                <kbd className="pointer-events-none inline-flex h-5 select-none items-center gap-1 rounded border bg-muted px-1.5 font-mono text-[10px] font-medium text-muted-foreground opacity-100">
-                  <span className="text-xs">⌘</span>
-                  {index + 1}
-                </kbd>
               </CommandItem>
             ))}
           </CommandGroup>
@@ -358,8 +357,8 @@ function SlashCommandMenu({
 
 export default function Notes() {
   const [mounted, setMounted] = useState(false);
-  const [view, setView] = useState<"grid" | "list" | "kanban">("grid");
   const [searchQuery, setSearchQuery] = useState("");
+  const [view, setView] = useState<"grid" | "kanban">("grid");
   const [sortBy, setSortBy] = useState<SortOption>("date-desc");
   const [isNewNoteDialogOpen, setIsNewNoteDialogOpen] = useState(false);
   const [isCreating, setIsCreating] = useState(false);
@@ -370,7 +369,10 @@ export default function Notes() {
     tags: [] as string[],
   });
   const [isAddingCustomTag, setIsAddingCustomTag] = useState(false);
-  const [newCustomTag, setNewCustomTag] = useState("");
+  const [newCustomTag, setNewCustomTag] = useState({
+    name: "",
+    color: "red-500",
+  });
   const [, setIsEditDialogOpen] = useState(false);
   const [, setEditingNote] = useState<Note | null>(null);
   const [showSlashCommands, setShowSlashCommands] = useState(false);
@@ -388,11 +390,8 @@ export default function Notes() {
 
   useEffect(() => {
     const savedView = localStorage.getItem("notesView");
-    if (
-      savedView &&
-      (savedView === "grid" || savedView === "list" || savedView === "kanban")
-    ) {
-      setView(savedView as "grid" | "list" | "kanban");
+    if (savedView && (savedView === "grid" || savedView === "kanban")) {
+      setView(savedView as "grid" | "kanban");
     }
     setMounted(true);
   }, []);
@@ -436,7 +435,10 @@ export default function Notes() {
         tags: [],
       });
       setIsAddingCustomTag(false);
-      setNewCustomTag("");
+      setNewCustomTag({
+        name: "",
+        color: "red-500",
+      });
       setIsNewNoteDialogOpen(false);
     } catch (error) {
       console.error("Failed to create note:", error);
@@ -740,7 +742,7 @@ export default function Notes() {
               {searchQuery ? (
                 <Search className="size-14 text-primary/70" strokeWidth={1.5} />
               ) : (
-                <ClipboardX
+                <StickyNote
                   className="size-14 text-primary/70"
                   strokeWidth={1.5}
                 />
@@ -822,74 +824,6 @@ export default function Notes() {
                 </h2>
               )}
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 pt-2">
-                {unpinnedNotes.map((note) => (
-                  <NoteCard
-                    key={note._id}
-                    note={{
-                      id: note._id,
-                      title: note.title,
-                      content: note.content,
-                      tags: note.tags,
-                      color: note.color,
-                      isPinned: note.isPinned,
-                      createdAt: new Date(note.createdAt),
-                      updatedAt: note.updatedAt
-                        ? new Date(note.updatedAt)
-                        : null,
-                      length: note.content.length,
-                    }}
-                    onPin={() => handlePinNote(note._id as Id<"notes">)}
-                    onDelete={() => handleDeleteNote(note._id as Id<"notes">)}
-                    handleUpdateNote={handleUpdateNote}
-                    isUpdating={isUpdating}
-                    isDeleting={isDeleting}
-                  />
-                ))}
-              </div>
-            </div>
-          </div>
-        )}
-        {view === "list" && (
-          <div>
-            {pinnedNotes.length > 0 && (
-              <div className="mb-6">
-                <h2 className="text-sm font-semibold text-muted-foreground mb-3">
-                  Pinned Notes
-                </h2>
-                <div className="grid grid-cols-1 gap-4">
-                  {pinnedNotes.map((note) => (
-                    <NoteCard
-                      key={note._id}
-                      note={{
-                        id: note._id,
-                        title: note.title,
-                        content: note.content,
-                        tags: note.tags,
-                        color: note.color,
-                        isPinned: note.isPinned,
-                        createdAt: new Date(note.createdAt),
-                        updatedAt: note.updatedAt
-                          ? new Date(note.updatedAt)
-                          : null,
-                        length: note.content.length,
-                      }}
-                      onPin={() => handlePinNote(note._id as Id<"notes">)}
-                      onDelete={() => handleDeleteNote(note._id as Id<"notes">)}
-                      handleUpdateNote={handleUpdateNote}
-                      isUpdating={isUpdating}
-                      isDeleting={isDeleting}
-                    />
-                  ))}
-                </div>
-              </div>
-            )}
-            <div>
-              {pinnedNotes.length > 0 && (
-                <h2 className="text-sm font-semibold text-muted-foreground mb-3">
-                  Other Notes
-                </h2>
-              )}
-              <div className="grid grid-cols-1 gap-4">
                 {unpinnedNotes.map((note) => (
                   <NoteCard
                     key={note._id}
@@ -1081,9 +1015,46 @@ export default function Notes() {
                   <div className="flex gap-2">
                     <Input
                       placeholder="Enter custom tag"
-                      value={newCustomTag}
-                      onChange={(e) => setNewCustomTag(e.target.value)}
+                      value={newCustomTag.name}
+                      onChange={(e) =>
+                        setNewCustomTag({
+                          ...newCustomTag,
+                          name: e.target.value,
+                        })
+                      }
                     />
+                    <Select
+                      value={newCustomTag.color || "red-500"}
+                      onValueChange={(color) =>
+                        setNewCustomTag({ ...newCustomTag, color })
+                      }
+                    >
+                      <SelectTrigger className="w-[100px]">
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {[
+                          { value: "red-500", label: "Red" },
+                          { value: "blue-500", label: "Blue" },
+                          { value: "green-500", label: "Green" },
+                          { value: "purple-500", label: "Purple" },
+                          { value: "orange-500", label: "Orange" },
+                          { value: "yellow-500", label: "Yellow" },
+                        ].map((color) => (
+                          <SelectItem key={color.value} value={color.value}>
+                            <div className="flex items-center gap-2">
+                              <div
+                                className={cn(
+                                  "w-3 h-3 rounded-full",
+                                  `bg-${color.value}`
+                                )}
+                              />
+                              {color.label}
+                            </div>
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
                     <Button
                       variant="outline"
                       size="icon"
@@ -1092,14 +1063,23 @@ export default function Notes() {
                       <X className="h-4 w-4" />
                     </Button>
                     <Button
-                      disabled={newCustomTag.length < 2}
+                      disabled={newCustomTag.name?.length < 2}
                       onClick={() => {
-                        if (newCustomTag) {
+                        if (newCustomTag.name) {
+                          const tagName = newCustomTag.name.toLowerCase();
+                          const colorBase = newCustomTag.color;
+
+                          (tagColorMap as TagColorMap)[tagName] = {
+                            bg: `bg-${colorBase}/10`,
+                            text: `text-${colorBase}`,
+                            dot: `bg-${colorBase}`,
+                          };
+
                           setNewNote({
                             ...newNote,
-                            tags: [...newNote.tags, newCustomTag.toLowerCase()],
+                            tags: [...newNote.tags, tagName],
                           });
-                          setNewCustomTag("");
+                          setNewCustomTag({ name: "", color: "red-500" });
                           setIsAddingCustomTag(false);
                         }
                       }}
@@ -1116,6 +1096,7 @@ export default function Notes() {
                         tags: [...newNote.tags, tag],
                       });
                     }}
+                    key={newNote.tags.length}
                   />
                 )}
               </div>
@@ -1127,7 +1108,10 @@ export default function Notes() {
                   setIsNewNoteDialogOpen(false);
                   setNewNote({ title: "", content: "", tags: [] });
                   setIsAddingCustomTag(false);
-                  setNewCustomTag("");
+                  setNewCustomTag({
+                    name: "",
+                    color: "red-500",
+                  });
                 }}
               >
                 Cancel
@@ -1138,7 +1122,10 @@ export default function Notes() {
                   handleCreateNote(newNote);
                   setNewNote({ title: "", content: "", tags: [] });
                   setIsAddingCustomTag(false);
-                  setNewCustomTag("");
+                  setNewCustomTag({
+                    name: "",
+                    color: "red-500",
+                  });
                 }}
               >
                 {isCreating ? (
@@ -1154,7 +1141,6 @@ export default function Notes() {
           </DialogContent>
         </Dialog>
       </div>
-
       <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between w-full">
         <div className="flex flex-col gap-4 lg:flex-row lg:items-center w-full lg:w-auto">
           <div className="relative w-full lg:w-[300px]">
@@ -1194,30 +1180,21 @@ export default function Notes() {
           </Select>
         </div>
         <div className="flex items-center gap-2">
-          <Button
-            variant={view === "grid" ? "secondary" : "ghost"}
-            onClick={() => setView("grid")}
-            className="flex items-center gap-2 flex-1 lg:flex-initial"
+          <Tabs
+            defaultValue="grid"
+            onValueChange={(value) => setView(value as "grid" | "kanban")}
           >
-            <Grid className="h-4 w-4" />
-            Grid
-          </Button>
-          <Button
-            variant={view === "list" ? "secondary" : "ghost"}
-            onClick={() => setView("list")}
-            className="flex items-center gap-2 flex-1 lg:flex-initial"
-          >
-            <List className="h-4 w-4" />
-            List
-          </Button>
-          <Button
-            variant={view === "kanban" ? "secondary" : "ghost"}
-            onClick={() => setView("kanban")}
-            className="flex items-center gap-2 flex-1 lg:flex-initial"
-          >
-            <Columns className="h-4 w-4" />
-            Kanban
-          </Button>
+            <TabsList>
+              <TabsTrigger value="grid" className="flex items-center gap-2">
+                <Grid className="h-4 w-4" />
+                Grid
+              </TabsTrigger>
+              <TabsTrigger value="kanban" className="flex items-center gap-2">
+                <Columns className="h-4 w-4" />
+                Kanban
+              </TabsTrigger>
+            </TabsList>
+          </Tabs>
         </div>
       </div>
 
@@ -1447,67 +1424,73 @@ function NoteCard({
           {note.createdAt.toLocaleDateString()}
         </div>
       </Card>
-
-      {/* Note Details Sheet */}
       <Sheet open={isDetailsSheetOpen} onOpenChange={setIsDetailsSheetOpen}>
         <SheetContent
           side="right"
           className={cn(
-            "overflow-y-auto sheet border-none",
+            "overflow-y-auto sheet border-none p-4 pl-6 pt-7",
             isMobile ? "w-full max-w-none" : "w-[500px] max-w-[500px]"
           )}
         >
-          <SheetHeader>
-            <SheetTitle className="text-xl font-semibold">
-              {note.title}
-            </SheetTitle>
-          </SheetHeader>
-
-          <div className="mt-6 space-y-6">
-            {/* Content */}
-            <div className="space-y-2">
-              <p className="text-sm whitespace-pre-line">{note.content}</p>
+          <SheetHeader className="space-y-4">
+            <div className="flex items-center justify-between">
+              <SheetTitle className="text-xl font-semibold line-clamp-1">
+                {note.title}
+              </SheetTitle>
             </div>
-
-            {/* Tags */}
-            <div className="space-y-2">
-              <h3 className="text-sm font-medium">Tags</h3>
-              <div className="flex flex-wrap gap-2">
-                {note.tags.map((tag) => {
-                  const colors = getTagColors(tag);
-                  return (
+            <div className="rounded-lg bg-muted/50 p-3 space-y-3">
+              <div className="text-xs text-muted-foreground">Tags</div>
+              {note.tags.length > 0 && (
+                <div className="flex flex-wrap gap-2 ">
+                  {note.tags.map((tag) => (
                     <Badge
                       key={tag}
                       variant="outline"
                       className={cn(
                         "transition-colors",
-                        colors.bg,
-                        colors.text
+                        getTagColors(tag).bg,
+                        getTagColors(tag).text
                       )}
                     >
                       <div className="flex items-center gap-1.5">
                         <div
-                          className={cn("w-1.5 h-1.5 rounded-full", colors.dot)}
+                          className={cn(
+                            "w-1.5 h-1.5 rounded-full",
+                            getTagColors(tag).dot
+                          )}
                         />
                         {tag.charAt(0).toUpperCase() + tag.slice(1)}
                       </div>
                     </Badge>
-                  );
-                })}
-              </div>
+                  ))}
+                </div>
+              )}
             </div>
-
-            {/* Created Date */}
+          </SheetHeader>
+          <div className="mt-6 space-y-6">
             <div className="space-y-2">
-              <h3 className="text-sm font-medium">Created</h3>
-              <div className="text-sm text-muted-foreground flex items-center gap-1.5">
-                <Calendar className="h-3 w-3" />
-                {note.createdAt.toLocaleDateString()}
+              <h3 className="text-sm font-medium">Content</h3>
+              <div className="rounded-lg bg-muted/50 p-3">
+                <p className="text-sm text-muted-foreground whitespace-pre-line">
+                  {note.content}
+                </p>
               </div>
             </div>
-
-            {/* Actions */}
-            <div className="flex gap-2 mt-6">
+            <div className="pt-4 border-t space-y-2">
+              <div className="flex flex-col sm:flex-row gap-2 sm:items-center justify-between text-xs text-muted-foreground">
+                <div className="flex items-center gap-2">
+                  <Clock className="h-3.5 w-3.5" />
+                  Created: {format(note.createdAt, "dd MMM, yyyy, hh:mm aa")}
+                </div>
+                {note.updatedAt && (
+                  <div className="flex items-center gap-2">
+                    <RefreshCw className="h-3.5 w-3.5" />
+                    Updated: {format(note.updatedAt, "dd MMM, yyyy, hh:mm aa")}
+                  </div>
+                )}
+              </div>
+            </div>
+            <div className="flex gap-2 pt-4">
               <Button
                 variant="outline"
                 className="flex-1"
@@ -1517,7 +1500,7 @@ function NoteCard({
                   setIsDetailsSheetOpen(false);
                 }}
               >
-                <Pencil className="h-4 w-4" />
+                <Pencil className="h-4 w-4 mr-2" />
                 Edit
               </Button>
               <Button
@@ -1528,15 +1511,13 @@ function NoteCard({
                   setIsDetailsSheetOpen(false);
                 }}
               >
-                <Trash2 className="h-4 w-4" />
+                <Trash2 className="h-4 w-4 mr-2" />
                 Delete
               </Button>
             </div>
           </div>
         </SheetContent>
       </Sheet>
-
-      {/* Existing Edit Dialog */}
       <Dialog open={isEditDialogOpen} onOpenChange={setIsEditDialogOpen}>
         <DialogContent className="sm:max-w-[625px] max-h-[80vh] sm:max-h-[90vh] overflow-y-auto">
           <DialogHeader>
@@ -1627,6 +1608,7 @@ function NoteCard({
                     });
                   }
                 }}
+                key={editingNote?.tags.length || 0}
               />
             </div>
           </div>
@@ -1714,30 +1696,7 @@ function TagSelect({
   const [isAddingCustomTag, setIsAddingCustomTag] = useState(false);
   const [newCustomTag, setNewCustomTag] = useState({
     name: "",
-    color: "bg-red-500",
   });
-
-  const addCustomTagWithColor = (name: string, color: string) => {
-    const tagName = name.toLowerCase();
-    const colorBase = color.replace("bg-", "").replace("/10", "");
-
-    (tagColorMap as TagColorMap)[tagName] = {
-      bg: `bg-${colorBase}/10`,
-      text: `text-${colorBase}`,
-      dot: `bg-${colorBase}`,
-    };
-
-    onTagSelect(tagName);
-  };
-
-  const tagColors = [
-    { value: "bg-red-500", label: "Red" },
-    { value: "bg-blue-500", label: "Blue" },
-    { value: "bg-green-500", label: "Green" },
-    { value: "bg-purple-500", label: "Purple" },
-    { value: "bg-orange-500", label: "Orange" },
-    { value: "bg-yellow-500", label: "Yellow" },
-  ];
 
   const defaultTags = [
     "Ideas",
@@ -1769,29 +1728,6 @@ function TagSelect({
               }
             />
           </div>
-          <Select
-            value={newCustomTag.color}
-            onValueChange={(value) =>
-              setNewCustomTag({
-                ...newCustomTag,
-                color: value,
-              })
-            }
-          >
-            <SelectTrigger className="w-full sm:w-[100px]">
-              <SelectValue />
-            </SelectTrigger>
-            <SelectContent>
-              {tagColors.map((color) => (
-                <SelectItem key={color.value} value={color.value}>
-                  <div className="flex items-center gap-2">
-                    <div className={cn("w-3 h-3 rounded-full", color.value)} />
-                    {color.label}
-                  </div>
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
         </div>
         <div className="flex flex-col sm:flex-row gap-2">
           <Button
@@ -1801,7 +1737,6 @@ function TagSelect({
               setIsAddingCustomTag(false);
               setNewCustomTag({
                 name: "",
-                color: tagColors[0].value,
               });
             }}
           >
@@ -1812,11 +1747,11 @@ function TagSelect({
             disabled={newCustomTag.name.length < 2}
             onClick={() => {
               if (newCustomTag.name) {
-                addCustomTagWithColor(newCustomTag.name, newCustomTag.color);
+                const tagName = newCustomTag.name.toLowerCase();
+                onTagSelect(tagName);
                 setIsAddingCustomTag(false);
                 setNewCustomTag({
                   name: "",
-                  color: tagColors[0].value,
                 });
               }
             }}

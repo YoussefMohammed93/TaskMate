@@ -986,7 +986,7 @@ export default function Tasks() {
 
     return (
       <div ref={setNodeRef} style={style}>
-        <Card className="relative cursor-pointer shadow-sm">
+        <Card className="relative cursor-pointer border-none shadow-sm">
           <CardHeader
             className="p-4 space-y-3"
             onClick={(e) => {
