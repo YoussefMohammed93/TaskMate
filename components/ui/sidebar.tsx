@@ -275,7 +275,7 @@ const SidebarTrigger = React.forwardRef<
   const { toggleSidebar, state } = useSidebar();
 
   return (
-    <TooltipProvider delayDuration={0}>
+    <TooltipProvider delayDuration={500}>
       <Tooltip>
         <TooltipTrigger asChild>
           <Button

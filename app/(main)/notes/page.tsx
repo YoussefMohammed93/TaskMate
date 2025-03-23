@@ -933,7 +933,10 @@ export default function Notes() {
           onOpenChange={setIsNewNoteDialogOpen}
         >
           <DialogTrigger asChild>
-            <Button variant="outline" className="dark:bg-muted/50">
+            <Button
+              variant="outline"
+              className="w-full sm:w-auto dark:bg-muted/50"
+            >
               <Plus className="h-4 w-4" />
               New Note
             </Button>
@@ -1179,7 +1182,7 @@ export default function Notes() {
             </SelectContent>
           </Select>
         </div>
-        <div className="flex items-center gap-2">
+        <div className="md:flex items-center hidden gap-2">
           <Tabs
             defaultValue="grid"
             onValueChange={(value) => setView(value as "grid" | "kanban")}
@@ -1439,7 +1442,9 @@ function NoteCard({
               </SheetTitle>
             </div>
             <div className="rounded-lg bg-muted/50 p-3 space-y-3">
-              <div className="text-xs text-muted-foreground">Tags</div>
+              <div className="text-xs text-start text-muted-foreground">
+                Tags
+              </div>
               {note.tags.length > 0 && (
                 <div className="flex flex-wrap gap-2 ">
                   {note.tags.map((tag) => (
@@ -1500,7 +1505,7 @@ function NoteCard({
                   setIsDetailsSheetOpen(false);
                 }}
               >
-                <Pencil className="h-4 w-4 mr-2" />
+                <Pencil className="h-4 w-4" />
                 Edit
               </Button>
               <Button
@@ -1511,7 +1516,7 @@ function NoteCard({
                   setIsDetailsSheetOpen(false);
                 }}
               >
-                <Trash2 className="h-4 w-4 mr-2" />
+                <Trash2 className="h-4 w-4" />
                 Delete
               </Button>
             </div>

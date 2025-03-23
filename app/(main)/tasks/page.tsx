@@ -84,6 +84,7 @@ import { DeleteTaskDialog } from "./components/delete-task-dialog";
 import { EditSubtaskDialog } from "./components/edit-subtask-dialog";
 import { Calendar as CalendarComponent } from "@/components/ui/calendar";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 
 type Tag = {
   id: string;
@@ -223,7 +224,7 @@ const RecurringIndicator = ({
 
   return (
     <div className="flex items-center gap-2 text-muted-foreground">
-      <Repeat className="h-4 w-4" />
+      <Repeat className="h-3.5 w-3.5" />
       <span className="text-xs">{getRecurrenceText()}</span>
     </div>
   );
@@ -730,22 +731,40 @@ const TaskActions = ({
         onDelete={handleDeleteTask}
         isDeleting={isDeleting}
       />
-      <Button
-        variant="outline"
-        size="icon"
-        className="h-8 w-8"
-        onClick={() => setIsEditDialogOpen(true)}
-      >
-        <Pencil className="h-4 w-4" />
-      </Button>
-      <Button
-        variant="outline"
-        size="icon"
-        className="h-8 w-8 text-destructive group"
-        onClick={() => setIsDeleteDialogOpen(true)}
-      >
-        <Trash2 className="h-4 w-4 text-destructive group-hover:text-destructive" />
-      </Button>
+      <TooltipProvider delayDuration={200}>
+        <Tooltip>
+          <TooltipTrigger asChild>
+            <Button
+              variant="outline"
+              size="icon"
+              className="h-8 w-8"
+              onClick={() => setIsEditDialogOpen(true)}
+            >
+              <Pencil className="h-4 w-4" />
+            </Button>
+          </TooltipTrigger>
+          <TooltipContent>
+            <p>Edit task</p>
+          </TooltipContent>
+        </Tooltip>
+      </TooltipProvider>
+      <TooltipProvider delayDuration={200}>
+        <Tooltip>
+          <TooltipTrigger asChild>
+            <Button
+              variant="outline"
+              size="icon"
+              className="h-8 w-8 text-destructive group"
+              onClick={() => setIsDeleteDialogOpen(true)}
+            >
+              <Trash2 className="h-4 w-4 text-destructive group-hover:text-destructive" />
+            </Button>
+          </TooltipTrigger>
+          <TooltipContent>
+            <p>Delete task</p>
+          </TooltipContent>
+        </Tooltip>
+      </TooltipProvider>
     </div>
   );
 };
@@ -1015,13 +1034,22 @@ export default function Tasks() {
                     selectedTask={selectedTask}
                     setSelectedTask={setSelectedTask}
                   />
-                  <div
-                    {...attributes}
-                    {...listeners}
-                    className="hidden md:flex drag-handle cursor-grab active:cursor-grabbing items-center justify-center gap-2 whitespace-nowrap rounded-md text-sm font-medium transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:pointer-events-none disabled:opacity-50 [&_svg]:pointer-events-none [&_svg]:size-4 [&_svg]:shrink-0 border border-input bg-background dark:bg-muted hover:dark:bg-muted/50 hover:text-accent-foreground h-8 w-8 p-1.5 hover:bg-muted"
-                  >
-                    <GripVertical className="h-5 w-5 text-muted-foreground" />
-                  </div>
+                  <TooltipProvider delayDuration={200}>
+                    <Tooltip>
+                      <TooltipTrigger asChild>
+                        <div
+                          {...attributes}
+                          {...listeners}
+                          className="hidden md:flex drag-handle cursor-grab active:cursor-grabbing items-center justify-center gap-2 whitespace-nowrap rounded-md text-sm font-medium transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:pointer-events-none disabled:opacity-50 [&_svg]:pointer-events-none [&_svg]:size-4 [&_svg]:shrink-0 border border-input bg-background dark:bg-muted hover:dark:bg-muted/50 hover:text-accent-foreground h-8 w-8 p-1.5 hover:bg-muted"
+                        >
+                          <GripVertical className="h-5 w-5 text-muted-foreground" />
+                        </div>
+                      </TooltipTrigger>
+                      <TooltipContent>
+                        <p>Drag to reorder</p>
+                      </TooltipContent>
+                    </Tooltip>
+                  </TooltipProvider>
                 </div>
                 <div className="flex md:hidden">
                   <TaskStatusDropdown
@@ -1117,10 +1145,10 @@ export default function Tasks() {
               ))}
               {task.tags.length > 2 && (
                 <Badge
-                  variant="secondary"
+                  variant="outline"
                   className="text-xs cursor-default dark:bg-muted/50"
                 >
-                  +{task.tags.length - 2}
+                  +{task.tags.length - 2} more
                 </Badge>
               )}
             </div>
@@ -1239,45 +1267,63 @@ export default function Tasks() {
                           >
                             {subtask.title}
                           </label>
-                          <div className="flex items-center gap-1">
-                            <Button
-                              variant="outline"
-                              className="h-7 w-7"
-                              disabled={
-                                isEditingSubtaskId === subtask.id.toString()
-                              }
-                              onClick={() =>
-                                setEditingSubtask({
-                                  id: subtask.id.toString(),
-                                  title: subtask.title,
-                                })
-                              }
-                            >
-                              {isEditingSubtaskId === subtask.id.toString() ? (
-                                <Loader2 className="h-3 w-3 animate-spin" />
-                              ) : (
-                                <Pencil className="h-3 w-3" />
-                              )}
-                            </Button>
-                            <Button
-                              variant="outline"
-                              className="h-7 w-7"
-                              disabled={
-                                isDeletingSubtaskId === subtask.id.toString()
-                              }
-                              onClick={() =>
-                                setDeletingSubtask({
-                                  id: subtask.id.toString(),
-                                  title: subtask.title,
-                                })
-                              }
-                            >
-                              {isDeletingSubtaskId === subtask.id.toString() ? (
-                                <Loader2 className="h-3 w-3 animate-spin" />
-                              ) : (
-                                <Trash2 className="h-3 w-3" />
-                              )}
-                            </Button>
+                          <div className="flex items-center gap-2">
+                            <TooltipProvider delayDuration={200}>
+                              <Tooltip>
+                                <TooltipTrigger asChild>
+                                  <Button
+                                    variant="outline"
+                                    className="h-8 w-8"
+                                    disabled={
+                                      isEditingSubtaskId === subtask.id.toString()
+                                    }
+                                    onClick={() =>
+                                      setEditingSubtask({
+                                        id: subtask.id.toString(),
+                                        title: subtask.title,
+                                      })
+                                    }
+                                  >
+                                    {isEditingSubtaskId === subtask.id.toString() ? (
+                                      <Loader2 className="h-3 w-3 animate-spin" />
+                                    ) : (
+                                      <Pencil className="h-3 w-3" />
+                                    )}
+                                  </Button>
+                                </TooltipTrigger>
+                                <TooltipContent>
+                                  <p>Edit subtask</p>
+                                </TooltipContent>
+                              </Tooltip>
+                            </TooltipProvider>
+                            <TooltipProvider delayDuration={200}>
+                              <Tooltip>
+                                <TooltipTrigger asChild>
+                                  <Button
+                                    variant="outline"
+                                    className="h-8 w-8 text-destructive hover:text-destructive"
+                                    disabled={
+                                      isDeletingSubtaskId === subtask.id.toString()
+                                    }
+                                    onClick={() =>
+                                      setDeletingSubtask({
+                                        id: subtask.id.toString(),
+                                        title: subtask.title,
+                                      })
+                                    }
+                                  >
+                                    {isDeletingSubtaskId === subtask.id.toString() ? (
+                                      <Loader2 className="h-3 w-3 animate-spin" />
+                                    ) : (
+                                      <Trash2 className="h-3 w-3" />
+                                    )}
+                                  </Button>
+                                </TooltipTrigger>
+                                <TooltipContent>
+                                  <p>Delete subtask</p>
+                                </TooltipContent>
+                              </Tooltip>
+                            </TooltipProvider>
                           </div>
                         </div>
                       ))}
@@ -1820,7 +1866,7 @@ export default function Tasks() {
           </p>
         </div>
       </div>
-      <div className="flex flex-col gap-4">
+      <div className="flex flex-col-reverse gap-4">
         <div className="block lg:hidden w-full relative">
           <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
           <Input
@@ -1836,7 +1882,7 @@ export default function Tasks() {
             onOpenChange={setIsNewTaskDialogOpen}
           >
             <DialogTrigger asChild>
-              <Button variant="outline" className="dark:bg-muted/50">
+              <Button variant="outline" className="w-full sm:w-auto dark:bg-muted/50">
                 <Plus className="h-4 w-4" />
                 <span>New Task</span>
               </Button>
