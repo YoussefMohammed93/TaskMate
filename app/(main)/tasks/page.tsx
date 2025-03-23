@@ -19,7 +19,21 @@ import {
   Search,
   RefreshCw,
   ClipboardX,
+  GripVertical,
 } from "lucide-react";
+import {
+  closestCorners,
+  DndContext,
+  DragEndEvent,
+  DragOverEvent,
+  DragOverlay,
+  DragStartEvent,
+  PointerSensor,
+  useDraggable,
+  useDroppable,
+  useSensor,
+  useSensors,
+} from "@dnd-kit/core";
 import { toast } from "sonner";
 import {
   Dialog,
@@ -1001,6 +1015,16 @@ export default function Tasks() {
     view: ViewType;
     children?: React.ReactNode;
   }) => {
+    const { attributes, listeners, setNodeRef, transform } = useDraggable({
+      id: task.id,
+    });
+
+    const style = transform
+      ? {
+          transform: `translate3d(${transform.x}px, ${transform.y}px, 0)`,
+        }
+      : undefined;
+
     const priorityColor =
       priorityColors[task.priority as keyof typeof priorityColors];
     const completedSubtasks =
@@ -1018,11 +1042,11 @@ export default function Tasks() {
     };
 
     return (
-      <>
+      <div ref={setNodeRef} style={style}>
         <Card
           className={cn(
-            "cursor-pointer",
-            view === "cards" ? "border" : "border-none shadow-sm"
+            view === "cards" ? "border" : "border-none shadow-sm",
+            "relative cursor-pointer"
           )}
           style={
             view === "cards"
@@ -1035,7 +1059,7 @@ export default function Tasks() {
             onClick={(e) => {
               const target = e.target as HTMLElement;
               const isInteractive = target.closest(
-                "button, [role='checkbox'], [role='combobox'], .task-actions"
+                "button, [role='checkbox'], [role='combobox'], .task-actions, .drag-handle"
               );
               if (!isInteractive) {
                 setSelectedTask(task);
@@ -1049,20 +1073,31 @@ export default function Tasks() {
                   {task.title}
                 </CardTitle>
               </div>
-              <div className="flex items-center flex-row-reverse sm:flex-row gap-2 task-actions">
-                <TaskStatusDropdown
-                  status={task.status}
-                  onStatusChange={(newStatus) =>
-                    handleStatusChange(task.id as Id<"tasks">, newStatus)
-                  }
-                />
-                <TaskActions
-                  task={task}
-                  customCategories={customCategories}
-                  setCustomCategories={setCustomCategories}
-                  selectedTask={selectedTask}
-                  setSelectedTask={setSelectedTask}
-                />
+              <div className="flex items-start md:items-end flex-col sm:flex-row-reverse gap-2 task-actions">
+                <div className="flex items-center gap-2">
+                  <TaskActions
+                    task={task}
+                    customCategories={customCategories}
+                    setCustomCategories={setCustomCategories}
+                    selectedTask={selectedTask}
+                    setSelectedTask={setSelectedTask}
+                  />
+                  <div
+                    {...attributes}
+                    {...listeners}
+                    className="hidden md:flex drag-handle cursor-grab active:cursor-grabbing items-center justify-center gap-2 whitespace-nowrap rounded-md text-sm font-medium transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:pointer-events-none disabled:opacity-50 [&_svg]:pointer-events-none [&_svg]:size-4 [&_svg]:shrink-0 border border-input bg-background dark:bg-muted hover:dark:bg-muted/50 hover:text-accent-foreground h-8 w-8 p-1.5 hover:bg-muted"
+                  >
+                    <GripVertical className="h-5 w-5 text-muted-foreground" />
+                  </div>
+                </div>
+                <div className="flex md:hidden">
+                  <TaskStatusDropdown
+                    status={task.status}
+                    onStatusChange={(newStatus) =>
+                      handleStatusChange(task.id as Id<"tasks">, newStatus)
+                    }
+                  />
+                </div>
               </div>
             </div>
             {task.description && (
@@ -1476,11 +1511,23 @@ export default function Tasks() {
             </div>
           </SheetContent>
         </Sheet>
-      </>
+      </div>
     );
   };
 
   const BoardView = () => {
+    const [activeTask, setActiveTask] = useState<Task | null>(null);
+    const [, setActiveDroppable] = useState<string | null>(null);
+    const updateTaskStatus = useMutation(api.tasks.updateTaskStatus);
+
+    const sensors = useSensors(
+      useSensor(PointerSensor, {
+        activationConstraint: {
+          distance: 8,
+        },
+      })
+    );
+
     const notStartedTasks = filteredTasks.filter(
       (task) => task.status === "not_started"
     );
@@ -1491,82 +1538,166 @@ export default function Tasks() {
       (task) => task.status === "completed"
     );
 
-    const renderTask = (task: Task) => (
-      <TaskCard key={task.id} task={task} view={view}>
-        <Badge
-          variant="outline"
+    const handleDragStart = (event: DragStartEvent) => {
+      const { active } = event;
+      const task = filteredTasks.find((t) => t.id === active.id);
+      if (task) setActiveTask(task);
+    };
+
+    const handleDragOver = (event: DragOverEvent) => {
+      const { over } = event;
+      setActiveDroppable(over ? over.id.toString() : null);
+    };
+
+    const handleDragEnd = async (event: DragEndEvent) => {
+      const { active, over } = event;
+
+      if (!over) return;
+
+      const activeTask = filteredTasks.find((t) => t.id === active.id);
+      const newStatus = over.id;
+
+      if (activeTask && newStatus && activeTask.status !== newStatus) {
+        try {
+          await updateTaskStatus({
+            taskId: activeTask.id as Id<"tasks">,
+            status: newStatus.toString(),
+          });
+
+          if (selectedTask && selectedTask.id === activeTask.id) {
+            setSelectedTask({
+              ...selectedTask,
+              status: newStatus.toString(),
+            });
+          }
+
+          toast.success(
+            `Task moved to ${newStatus.toString().replace(/_/g, " ")}`
+          );
+        } catch (error) {
+          console.error("Failed to update task status:", error);
+          toast.error("Failed to update task status");
+        }
+      }
+
+      setActiveTask(null);
+      setActiveDroppable(null);
+    };
+
+    const DroppableColumn = ({
+      id,
+      title,
+      tasks,
+      color,
+    }: {
+      id: string;
+      title: string;
+      tasks: Task[];
+      color: string;
+    }) => {
+      const { setNodeRef, isOver } = useDroppable({ id });
+
+      return (
+        <div
+          ref={setNodeRef}
           className={cn(
-            "capitalize",
-            priorityColors[task.priority as keyof typeof priorityColors].text,
-            priorityColors[task.priority as keyof typeof priorityColors].bg
+            "space-y-4 bg-secondary dark:bg-muted/60 p-5 rounded-xl h-fit transition-colors duration-200",
+            isOver && "bg-muted/80 dark:bg-muted/80 ring-2 ring-primary/20"
           )}
         >
-          {task.priority}
-        </Badge>
-      </TaskCard>
-    );
-
-    if (filteredTasks.length === 0) {
-      return (
-        <div className="flex flex-col items-center justify-center p-8 text-center">
-          <div className="p-5 mb-3 bg-secondary rounded-full flex items-center justify-center">
-            {searchQuery ||
-            priorityFilter !== "all" ||
-            statusFilter !== "all" ? (
-              <Search className="size-12 text-muted-foreground" />
-            ) : (
-              <ClipboardX className="size-12 text-muted-foreground" />
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-2">
+              <div className={cn("h-2 w-2 rounded-full", color)} />
+              <h3 className="font-semibold">{title}</h3>
+            </div>
+            <Badge
+              className={cn(
+                "text-white",
+                color.replace("bg-", "bg-opacity-80 bg-")
+              )}
+            >
+              {tasks.length}
+            </Badge>
+          </div>
+          <div className="space-y-3">
+            {tasks.map((task) => (
+              <TaskCard key={task.id} task={task} view={view}>
+                <Badge
+                  variant="outline"
+                  className={cn(
+                    "capitalize",
+                    priorityColors[task.priority as keyof typeof priorityColors]
+                      .text,
+                    priorityColors[task.priority as keyof typeof priorityColors]
+                      .bg
+                  )}
+                >
+                  {task.priority}
+                </Badge>
+              </TaskCard>
+            ))}
+            {isOver && tasks.length === 0 && (
+              <div className="h-24 rounded-lg border-2 border-dashed border-primary/20 flex items-center justify-center">
+                <p className="text-sm text-muted-foreground">Drop here</p>
+              </div>
             )}
           </div>
-          <h3 className="font-semibold text-lg mb-2">No tasks found</h3>
-          <p className="text-muted-foreground text-sm max-w-lg">
-            {searchQuery || priorityFilter !== "all" || statusFilter !== "all"
-              ? "Try adjusting your search or filters to find what you're looking for."
-              : "Get started by creating your first task using the 'New Task' button above."}
-          </p>
         </div>
       );
-    }
+    };
 
     return (
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-2 xl:grid-cols-3 gap-4 mt-5">
-        <div className="space-y-4 bg-secondary dark:bg-muted/60 p-5 rounded-xl h-fit">
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-2">
-              <div className="h-2 w-2 rounded-full bg-slate-400" />
-              <h3 className="font-semibold">Not Started</h3>
-            </div>
-            <Badge className="bg-gray-500/80 text-white">
-              {notStartedTasks.length}
-            </Badge>
-          </div>
-          <div className="space-y-3">{notStartedTasks.map(renderTask)}</div>
+      <DndContext
+        sensors={sensors}
+        collisionDetection={closestCorners}
+        onDragStart={handleDragStart}
+        onDragOver={handleDragOver}
+        onDragEnd={handleDragEnd}
+      >
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-2 xl:grid-cols-3 gap-4 mt-5">
+          <DroppableColumn
+            id="not_started"
+            title="Not Started"
+            tasks={notStartedTasks}
+            color="bg-slate-400"
+          />
+          <DroppableColumn
+            id="in_progress"
+            title="In Progress"
+            tasks={inProgressTasks}
+            color="bg-blue-400"
+          />
+          <DroppableColumn
+            id="completed"
+            title="Completed"
+            tasks={completedTasks}
+            color="bg-green-400"
+          />
         </div>
-        <div className="space-y-4 bg-secondary dark:bg-muted/60 p-5 rounded-xl h-fit">
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-2">
-              <div className="h-2 w-2 rounded-full bg-blue-400" />
-              <h3 className="font-semibold">In Progress</h3>
+
+        <DragOverlay>
+          {activeTask ? (
+            <div className="opacity-50">
+              <TaskCard task={activeTask} view={view}>
+                <Badge
+                  variant="outline"
+                  className={cn(
+                    "capitalize",
+                    priorityColors[
+                      activeTask.priority as keyof typeof priorityColors
+                    ].text,
+                    priorityColors[
+                      activeTask.priority as keyof typeof priorityColors
+                    ].bg
+                  )}
+                >
+                  {activeTask.priority}
+                </Badge>
+              </TaskCard>
             </div>
-            <Badge className="bg-blue-500/80 text-white">
-              {inProgressTasks.length}
-            </Badge>
-          </div>
-          <div className="space-y-3">{inProgressTasks.map(renderTask)}</div>
-        </div>
-        <div className="space-y-4 bg-secondary dark:bg-muted/60 p-5 rounded-xl h-fit">
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-2">
-              <div className="h-2 w-2 rounded-full bg-green-400" />
-              <h3 className="font-semibold">Completed</h3>
-            </div>
-            <Badge className="bg-green-500/80 text-white">
-              {completedTasks.length}
-            </Badge>
-          </div>
-          <div className="space-y-3">{completedTasks.map(renderTask)}</div>
-        </div>
-      </div>
+          ) : null}
+        </DragOverlay>
+      </DndContext>
     );
   };
 
