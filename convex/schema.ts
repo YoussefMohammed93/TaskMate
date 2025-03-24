@@ -57,4 +57,26 @@ export default defineSchema({
     createdAt: v.string(),
     updatedAt: v.optional(v.string()),
   }).index("by_user", ["userId"]),
+
+  goals: defineTable({
+    title: v.string(),
+    description: v.string(),
+    category: v.string(),
+    timeframe: v.string(),
+    priority: v.string(),
+    status: v.string(),
+    progress: v.number(),
+    startDate: v.string(),
+    endDate: v.string(),
+    userId: v.string(),
+    createdAt: v.string(),
+    updatedAt: v.optional(v.string()),
+    milestones: v.array(
+      v.object({
+        id: v.string(),
+        title: v.string(),
+        completed: v.boolean(),
+      })
+    ),
+  }).index("by_user", ["userId"]),
 });
