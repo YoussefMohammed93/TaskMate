@@ -54,13 +54,27 @@ export const getActiveSession = query({
     if (!identity) throw new Error("Not authenticated");
 
     const userId = identity.subject;
-    const session = await ctx.db
+
+    const runningSession = await ctx.db
       .query("pomodoroSessions")
       .filter((q) => q.eq(q.field("userId"), userId))
       .filter((q) => q.eq(q.field("completed"), false))
+      .filter((q) => q.eq(q.field("isRunning"), true))
       .first();
 
-    return session || null;
+    if (runningSession) {
+      return runningSession;
+    }
+
+    const recentStoppedSession = await ctx.db
+      .query("pomodoroSessions")
+      .filter((q) => q.eq(q.field("userId"), userId))
+      .filter((q) => q.eq(q.field("completed"), false))
+      .filter((q) => q.eq(q.field("isRunning"), false))
+      .order("desc")
+      .first();
+
+    return recentStoppedSession || null;
   },
 });
 

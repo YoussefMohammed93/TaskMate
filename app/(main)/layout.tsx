@@ -5,6 +5,7 @@ import { usePathname } from "next/navigation";
 import { AppSidebar } from "@/components/app-sidebar";
 import { Header } from "@/components/dashboard/header";
 import { SidebarProvider } from "@/components/ui/sidebar";
+import { FloatingPomodoroTimer } from "@/components/FloatingPomodoroTimer";
 
 export default function Layout({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
@@ -24,6 +25,7 @@ export default function Layout({ children }: { children: React.ReactNode }) {
             </div>
           </div>
         </main>
+        <FloatingPomodoroTimer />
       </div>
     </SidebarProvider>
   );

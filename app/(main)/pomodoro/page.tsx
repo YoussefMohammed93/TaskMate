@@ -186,7 +186,8 @@ function useTimer(
 
   const updateProgress = (currentTime: number) => {
     const totalTime = (savedSettings?.[mode] || DEFAULT_SETTINGS[mode]) * 60;
-    setProgress((currentTime / totalTime) * 100);
+    const currentProgress = (currentTime / totalTime) * 100;
+    setProgress(Math.max(0, Math.min(100, currentProgress))); // Ensure progress stays between 0-100
   };
 
   const initializeSession = () => {
@@ -195,21 +196,18 @@ function useTimer(
 
     if (activeSession && !Array.isArray(activeSession)) {
       setMode(activeSession.mode as "work" | "shortBreak" | "longBreak");
-
       setTimeLeft(activeSession.remainingSeconds);
-
       setProgress(
         (activeSession.remainingSeconds / activeSession.totalSeconds) * 100
       );
-
-      setIsRunning(false);
+      // Set isRunning based on the active session's state
+      setIsRunning(activeSession.isRunning);
 
       if (!timerRef.current) {
         timerRef.current = new Timer(
           (remaining) => {
             setTimeLeft(remaining);
             updateProgress(remaining);
-
             updateSessionStatus({
               sessionId: activeSession._id as Id<"pomodoroSessions">,
               isRunning: true,
@@ -223,9 +221,15 @@ function useTimer(
             });
           }
         );
+
+        // If the session is running, start the timer immediately
+        if (activeSession.isRunning) {
+          timerRef.current.start(activeSession.remainingSeconds);
+        }
       }
     } else if (savedSettings && !Array.isArray(savedSettings)) {
-      setTimeLeft(savedSettings[mode] * 60);
+      const duration = savedSettings[mode] * 60;
+      setTimeLeft(duration);
       setProgress(100);
     }
   };
@@ -236,7 +240,6 @@ function useTimer(
         (remaining) => {
           setTimeLeft(remaining);
           updateProgress(remaining);
-
           if (activeSession && !Array.isArray(activeSession)) {
             updateSessionStatus({
               sessionId: activeSession._id as Id<"pomodoroSessions">,
@@ -256,10 +259,12 @@ function useTimer(
       );
     }
 
+    const totalSeconds = (savedSettings?.[mode] || DEFAULT_SETTINGS[mode]) * 60;
+
     if (!activeSession || Array.isArray(activeSession)) {
       await startSession({
         mode,
-        totalSeconds: timeLeft,
+        totalSeconds,
       });
     } else {
       await updateSessionStatus({
