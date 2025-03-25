@@ -97,4 +97,27 @@ export default defineSchema({
     lastPausedAt: v.optional(v.string()),
     completed: v.boolean(),
   }).index("by_user", ["userId"]),
+
+  calendarEvents: defineTable({
+    title: v.string(),
+    description: v.string(),
+    startDate: v.string(),
+    endDate: v.string(),
+    time: v.string(),
+    type: v.union(v.literal("task"), v.literal("event"), v.literal("meeting")),
+    location: v.optional(v.string()),
+    completed: v.boolean(),
+    isAllDay: v.boolean(),
+    userId: v.string(),
+    createdAt: v.string(),
+    updatedAt: v.optional(v.string()),
+    recurrence: v.optional(
+      v.union(
+        v.literal("none"),
+        v.literal("daily"),
+        v.literal("weekly"),
+        v.literal("monthly")
+      )
+    ),
+  }).index("by_user", ["userId"]),
 });

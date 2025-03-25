@@ -1,6 +1,7 @@
 import { v } from "convex/values";
 import { mutation, query } from "./_generated/server";
 
+// Create a new task
 export const createTask = mutation({
   args: {
     title: v.string(),
@@ -57,6 +58,7 @@ export const createTask = mutation({
   },
 });
 
+// Get all tasks for the current user
 export const list = query({
   handler: async (ctx) => {
     const identity = await ctx.auth.getUserIdentity();
@@ -73,6 +75,7 @@ export const list = query({
   },
 });
 
+// Update the status of a task
 export const updateTaskStatus = mutation({
   args: {
     taskId: v.id("tasks"),
@@ -90,6 +93,7 @@ export const updateTaskStatus = mutation({
   },
 });
 
+// Update a task
 export const updateTask = mutation({
   args: {
     taskId: v.id("tasks"),
@@ -153,6 +157,7 @@ export const updateTask = mutation({
   },
 });
 
+// Delete a task
 export const deleteTask = mutation({
   args: {
     taskId: v.id("tasks"),
@@ -176,6 +181,7 @@ export const deleteTask = mutation({
   },
 });
 
+// Update the status of a subtask
 export const updateSubtaskStatus = mutation({
   args: {
     taskId: v.id("tasks"),
@@ -207,6 +213,7 @@ export const updateSubtaskStatus = mutation({
   },
 });
 
+// Update a subtask
 export const updateSubtask = mutation({
   args: {
     taskId: v.id("tasks"),
@@ -238,6 +245,7 @@ export const updateSubtask = mutation({
   },
 });
 
+// Delete a subtask
 export const deleteSubtask = mutation({
   args: {
     taskId: v.id("tasks"),

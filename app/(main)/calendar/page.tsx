@@ -10,6 +10,7 @@ import {
   Trash2,
   Loader2,
 } from "lucide-react";
+import { toast } from "sonner";
 import {
   Dialog,
   DialogContent,
@@ -19,42 +20,44 @@ import {
   DialogTrigger,
 } from "@/components/ui/dialog";
 import {
-  Popover,
-  PopoverContent,
-  PopoverTrigger,
-} from "@/components/ui/popover";
-import {
   Select,
   SelectContent,
   SelectItem,
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from "@/components/ui/popover";
 import { cn } from "@/lib/utils";
 import { useState, useEffect } from "react";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { api } from "@/convex/_generated/api";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Switch } from "@/components/ui/switch";
+import { Id } from "@/convex/_generated/dataModel";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Textarea } from "@/components/ui/textarea";
-import { format, addHours, isSameDay } from "date-fns";
+import { useMutation, useQuery } from "convex/react";
+import { format, addHours, addMinutes, isSameDay } from "date-fns";
 import { Calendar as CalendarComponent } from "@/components/ui/calendar";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 
 interface Event {
   id: string;
   title: string;
-  description: string;
-  startDate: Date;
   endDate: Date;
-  category: "task" | "event" | "meeting";
+  startDate: Date;
+  color?: string;
   isAllDay: boolean;
   location?: string;
-  reminder?: "5min" | "15min" | "30min" | "1hour" | "1day";
+  description: string;
+  category: "task" | "event" | "meeting";
   recurrence?: "none" | "daily" | "weekly" | "monthly";
-  color?: string;
 }
 
 interface FilterOptions {
@@ -71,17 +74,16 @@ interface FilterOptions {
 }
 
 interface CalendarItem {
-  id: string;
+  id: Id<"calendarEvents">;
   date: Date;
   time: string;
   title: string;
-  type: "task" | "event" | "meeting";
-  description: string;
-  location?: string;
-  completed: boolean;
-  isAllDay: boolean;
   endDate?: Date;
-  reminder?: "5min" | "15min" | "30min" | "1hour" | "1day";
+  location?: string;
+  isAllDay: boolean;
+  completed: boolean;
+  description: string;
+  type: "task" | "event" | "meeting";
   recurrence?: "none" | "daily" | "weekly" | "monthly";
 }
 
@@ -106,51 +108,33 @@ const categoryColors = {
   },
 } as const;
 
-const calendarItems: CalendarItem[] = [
-  {
-    id: "1",
-    date: new Date(2025, 2, 21),
-    time: "09:00 AM - 10:00 AM",
-    title: "Team Stand-up Meeting",
-    type: "meeting",
-    description: "Daily team sync and progress updates",
-    location: "Conference Room A",
-    completed: false,
-    isAllDay: false,
-  },
-  {
-    id: "2",
-    date: new Date(2025, 2, 22),
-    time: "11:30 AM - 12:30 PM",
-    title: "Project Review",
-    type: "event",
-    description: "Q1 project milestone review",
-    location: "Virtual - Zoom",
-    completed: false,
-    isAllDay: false,
-  },
-  {
-    id: "3",
-    date: new Date(2025, 2, 22),
-    time: "02:00 PM - 03:30 PM",
-    title: "Complete Documentation",
-    type: "task",
-    description: "Update API documentation for new features",
-    completed: true,
-    isAllDay: false,
-  },
-  {
-    id: "4",
-    date: new Date(2025, 2, 23),
-    time: "04:00 PM - 05:00 PM",
-    title: "Client Meeting",
-    type: "meeting",
-    description: "Product demo for new features",
-    location: "Meeting Room B",
-    completed: false,
-    isAllDay: false,
-  },
-];
+const isToday = (date: Date) => {
+  const today = new Date();
+  return (
+    date.getDate() === today.getDate() &&
+    date.getMonth() === today.getMonth() &&
+    date.getFullYear() === today.getFullYear()
+  );
+};
+
+const isInPast = (date: Date) => {
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
+  const compareDate = new Date(date);
+  compareDate.setHours(0, 0, 0, 0);
+  return compareDate < today;
+};
+
+const isValidDateTime = (dateTime: Date) => {
+  const now = new Date();
+  return dateTime > now;
+};
+
+const getCurrentTimeString = () => {
+  const now = new Date();
+  now.setMinutes(now.getMinutes() + 1);
+  return format(now, "HH:mm");
+};
 
 export default function Calendar() {
   const [date, setDate] = useState<Date>(new Date());
@@ -166,6 +150,10 @@ export default function Calendar() {
     category: "event",
     isAllDay: false,
   });
+  const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
+  const [eventToDelete, setEventToDelete] = useState<CalendarItem | null>(null);
+  const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
+  const [eventToEdit, setEventToEdit] = useState<CalendarItem | null>(null);
   const [filterOptions, setFilterOptions] = useState<FilterOptions>({
     categories: {
       task: true,
@@ -178,11 +166,23 @@ export default function Calendar() {
       end: null,
     },
   });
-  const [items, setItems] = useState<CalendarItem[]>(calendarItems);
-  const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
-  const [eventToDelete, setEventToDelete] = useState<CalendarItem | null>(null);
-  const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
-  const [eventToEdit, setEventToEdit] = useState<CalendarItem | null>(null);
+  const [isCreating, setIsCreating] = useState(false);
+  const [isDeleting, setIsDeleting] = useState(false);
+  const [isEditing, setIsEditing] = useState(false);
+
+  const createEventMutation = useMutation(api.calendar.createEvent);
+  const updateEventMutation = useMutation(api.calendar.updateEvent);
+  const deleteEventMutation = useMutation(api.calendar.deleteEvent);
+  const toggleEventCompletionMutation = useMutation(
+    api.calendar.toggleEventCompletion
+  );
+
+  const events = useQuery(api.calendar.getEvents, {
+    startDate: format(date, "yyyy-MM-dd"),
+    endDate: format(date, "yyyy-MM-dd"),
+  });
+
+  const isLoading = !mounted || events === undefined;
 
   useEffect(() => {
     const savedView = localStorage.getItem("calendarView");
@@ -201,40 +201,47 @@ export default function Calendar() {
     }
   }, [view, mounted]);
 
-  if (!mounted) {
-    return (
-      <div className="h-full flex items-center justify-center">
-        <Loader2 className="animate-spin h-8 w-8" />
-      </div>
-    );
-  }
+  const handleCreateEvent = async () => {
+    setIsCreating(true);
+    const toastId = toast.loading(`Creating "${newEvent.title}"...`);
 
-  const handleCreateEvent = () => {
-    const newItem: CalendarItem = {
-      id: Date.now().toString(),
-      date: newEvent.startDate,
-      time: `${format(newEvent.startDate, "hh:mm a")} - ${format(newEvent.endDate, "hh:mm a")}`,
-      title: newEvent.title,
-      type: newEvent.category,
-      description: newEvent.description,
-      location: newEvent.location,
-      completed: false,
-      isAllDay: newEvent.isAllDay,
-      endDate: newEvent.endDate,
-    };
+    try {
+      await createEventMutation({
+        title: newEvent.title,
+        description: newEvent.description,
+        startDate: format(newEvent.startDate, "yyyy-MM-dd"),
+        endDate: format(newEvent.endDate, "yyyy-MM-dd"),
+        time: `${format(newEvent.startDate, "h:mm aa")} - ${format(newEvent.endDate, "h:mm aa")}`,
+        type: newEvent.category,
+        location: newEvent.location,
+        isAllDay: newEvent.isAllDay,
+        recurrence: newEvent.recurrence,
+      });
 
-    setItems((prevItems) => [...prevItems, newItem]);
-    setIsAddEventOpen(false);
+      toast.success("Event created successfully", {
+        id: toastId,
+        description: `"${newEvent.title}" has been created.`,
+      });
 
-    setNewEvent({
-      id: "",
-      title: "",
-      description: "",
-      startDate: date,
-      endDate: addHours(date, 1),
-      category: "event",
-      isAllDay: false,
-    });
+      setIsAddEventOpen(false);
+      setNewEvent({
+        id: "",
+        title: "",
+        description: "",
+        startDate: date,
+        endDate: addHours(date, 1),
+        category: "event",
+        isAllDay: false,
+      });
+    } catch (error) {
+      console.error("Failed to create event:", error);
+      toast.error("Failed to create event", {
+        id: toastId,
+        description: "Please try again later.",
+      });
+    } finally {
+      setIsCreating(false);
+    }
   };
 
   const handleFilterChange = (
@@ -278,38 +285,89 @@ export default function Calendar() {
     }
   };
 
-  const toggleEventCompletion = (id: string) => {
-    setItems((prevItems) =>
-      prevItems.map((item) =>
-        item.id === id ? { ...item, completed: !item.completed } : item
-      )
-    );
+  const toggleEventCompletion = async (id: Id<"calendarEvents">) => {
+    await toggleEventCompletionMutation({ id });
   };
 
-  const handleDeleteEvent = () => {
-    if (eventToDelete) {
-      setItems((prevItems) =>
-        prevItems.filter((item) => item.id !== eventToDelete.id)
-      );
-      setEventToDelete(null);
-      setIsDeleteDialogOpen(false);
+  const handleDeleteEvent = async () => {
+    if (eventToDelete?.id) {
+      setIsDeleting(true);
+      const toastId = toast.loading(`Deleting "${eventToDelete.title}"...`);
+
+      try {
+        await deleteEventMutation({ id: eventToDelete.id });
+        toast.success("Event deleted successfully", {
+          id: toastId,
+          description: `"${eventToDelete.title}" has been deleted.`,
+        });
+        setEventToDelete(null);
+        setIsDeleteDialogOpen(false);
+      } catch (error) {
+        console.error("Failed to delete event:", error);
+        toast.error("Failed to delete event", {
+          id: toastId,
+          description: "Please try again later.",
+        });
+      } finally {
+        setIsDeleting(false);
+      }
     }
   };
 
-  const handleUpdateEvent = () => {
-    if (eventToEdit) {
-      setItems((prevItems) =>
-        prevItems.map((item) =>
-          item.id === eventToEdit.id ? eventToEdit : item
-        )
-      );
-      setEventToEdit(null);
-      setIsEditDialogOpen(false);
+  const handleUpdateEvent = async () => {
+    if (eventToEdit?.id) {
+      if (isInPast(new Date(eventToEdit.date))) {
+        toast.error("Invalid date/time", {
+          description: "Cannot update events to be in the past",
+        });
+        return;
+      }
+
+      setIsEditing(true);
+      const toastId = toast.loading(`Updating "${eventToEdit.title}"...`);
+
+      try {
+        await updateEventMutation({
+          id: eventToEdit.id,
+          title: eventToEdit.title,
+          description: eventToEdit.description,
+          startDate: format(eventToEdit.date, "yyyy-MM-dd"),
+          endDate: format(
+            eventToEdit.endDate || eventToEdit.date,
+            "yyyy-MM-dd"
+          ),
+          time: `${format(new Date(eventToEdit.date), "h:mm aa")} - ${format(
+            new Date(eventToEdit.endDate || addHours(eventToEdit.date, 1)),
+            "h:mm aa"
+          )}`,
+          type: eventToEdit.type,
+          location: eventToEdit.location,
+          isAllDay: eventToEdit.isAllDay,
+          recurrence: eventToEdit.recurrence,
+        });
+
+        toast.success("Event updated successfully", {
+          id: toastId,
+          description: `"${eventToEdit.title}" has been updated.`,
+        });
+        setEventToEdit(null);
+        setIsEditDialogOpen(false);
+      } catch (error) {
+        console.error("Failed to update event:", error);
+        toast.error("Failed to update event", {
+          id: toastId,
+          description: "Please try again later.",
+        });
+      } finally {
+        setIsEditing(false);
+      }
     }
   };
 
   const getFilteredItems = () => {
-    return items.filter((item) => {
+    if (!events) return [];
+
+    return events.filter((item) => {
       if (!filterOptions.categories[item.type]) {
         return false;
       }
@@ -318,37 +376,25 @@ export default function Calendar() {
         return false;
       }
 
-      if (!isSameDay(item.date, date)) {
-        return false;
-      }
-
-      if (filterOptions.dateRange.start || filterOptions.dateRange.end) {
-        if (
-          filterOptions.dateRange.start &&
-          item.date < filterOptions.dateRange.start
-        ) {
-          return false;
-        }
-
-        if (
-          filterOptions.dateRange.end &&
-          item.date > filterOptions.dateRange.end
-        ) {
-          return false;
-        }
-      }
-
       return true;
     });
   };
 
+  if (isLoading) {
+    return (
+      <div className="w-full h-[80vh] flex items-center justify-center">
+        <Loader2 className="h-8 w-8 animate-spin" />
+      </div>
+    );
+  }
+
   return (
-    <div className="pb-2 space-y-6">
-      <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
-        <div>
+    <div className="h-full flex-1 flex-col space-y-8 md:flex">
+      <div className="flex items-center justify-between space-y-2">
+        <div className="w-full sm:w-auto space-y-2">
           <h1 className="text-3xl font-light tracking-tight">Calendar</h1>
-          <p className="text-muted-foreground mt-1 text-xl font-light">
-            Organize and track your tasks efficiently
+          <p className="text-muted-foreground font-light">
+            Manage your schedule and organize your events
           </p>
         </div>
         <div className="flex items-center gap-2 w-full sm:w-auto">
@@ -566,9 +612,16 @@ export default function Calendar() {
                     <div className="flex gap-2">
                       <Input
                         type="date"
+                        min={format(new Date(), "yyyy-MM-dd")}
                         value={format(newEvent.startDate, "yyyy-MM-dd")}
                         onChange={(e) => {
                           const newDate = new Date(e.target.value);
+                          if (isInPast(newDate)) {
+                            toast.error("Invalid date", {
+                              description: "Cannot set date in the past",
+                            });
+                            return;
+                          }
                           setNewEvent({ ...newEvent, startDate: newDate });
                         }}
                       />
@@ -594,9 +647,23 @@ export default function Calendar() {
                     <div className="flex gap-2">
                       <Input
                         type="date"
+                        min={format(newEvent.startDate, "yyyy-MM-dd")}
                         value={format(newEvent.endDate, "yyyy-MM-dd")}
                         onChange={(e) => {
                           const newDate = new Date(e.target.value);
+                          if (isInPast(newDate)) {
+                            toast.error("Invalid date", {
+                              description: "Cannot set date in the past",
+                            });
+                            return;
+                          }
+                          if (newDate < newEvent.startDate) {
+                            toast.error("Invalid date", {
+                              description:
+                                "End date cannot be before start date",
+                            });
+                            return;
+                          }
                           setNewEvent({ ...newEvent, endDate: newDate });
                         }}
                       />
@@ -629,32 +696,12 @@ export default function Calendar() {
                   />
                 </div>
                 <div className="grid gap-2">
-                  <Label>Reminder</Label>
-                  <Select
-                    value={newEvent.reminder}
-                    // onValueChange={(value: Event["reminder"]) =>
-                    //   setNewEvent({ ...newEvent, reminder: value })
-                    // }
-                  >
-                    <SelectTrigger>
-                      <SelectValue placeholder="No reminder" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="5min">5 minutes before</SelectItem>
-                      <SelectItem value="15min">15 minutes before</SelectItem>
-                      <SelectItem value="30min">30 minutes before</SelectItem>
-                      <SelectItem value="1hour">1 hour before</SelectItem>
-                      <SelectItem value="1day">1 day before</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
-                <div className="grid gap-2">
                   <Label>Recurrence</Label>
                   <Select
                     value={newEvent.recurrence || "none"}
-                    // onValueChange={(value: Event["recurrence"]) =>
-                    //   setNewEvent({ ...newEvent, recurrence: value })
-                    // }
+                    onValueChange={(
+                      value: "none" | "daily" | "weekly" | "monthly"
+                    ) => setNewEvent({ ...newEvent, recurrence: value })}
                   >
                     <SelectTrigger>
                       <SelectValue />
@@ -672,11 +719,22 @@ export default function Calendar() {
                 <Button
                   variant="outline"
                   onClick={() => setIsAddEventOpen(false)}
+                  disabled={isCreating}
                 >
                   Cancel
                 </Button>
-                <Button onClick={handleCreateEvent} disabled={!newEvent.title}>
-                  Create Event
+                <Button
+                  onClick={handleCreateEvent}
+                  disabled={!newEvent.title || isCreating}
+                >
+                  {isCreating ? (
+                    <>
+                      <Loader2 className="h-4 w-4 animate-spin" />
+                      Creating...
+                    </>
+                  ) : (
+                    "Create Event"
+                  )}
                 </Button>
               </DialogFooter>
             </DialogContent>
@@ -713,7 +771,6 @@ export default function Calendar() {
               <div className="flex items-center gap-2 w-full sm:w-auto justify-end">
                 <Button
                   variant="outline"
-                  size="sm"
                   className="dark:bg-muted/50"
                   onClick={() => setDate(new Date())}
                 >
@@ -723,7 +780,7 @@ export default function Calendar() {
                   value={view}
                   onValueChange={(v: "month" | "week" | "day") => setView(v)}
                 >
-                  <SelectTrigger className="w-[100px] sm:w-[120px]">
+                  <SelectTrigger className="w-[90px]">
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent>
@@ -795,92 +852,127 @@ export default function Calendar() {
           </CardHeader>
           <CardContent className="p-0">
             <div className="divide-y">
-              {getFilteredItems().map((item) => (
-                <div
-                  key={item.id}
-                  className={cn(
-                    "flex flex-col sm:flex-row items-start p-4 sm:p-6 hover:bg-muted/50 transition-colors relative",
-                    item.completed && "opacity-60"
-                  )}
-                >
+              {getFilteredItems().length > 0 ? (
+                getFilteredItems().map((item) => (
                   <div
+                    key={item._id}
                     className={cn(
-                      "absolute left-0 top-0 bottom-0 w-1",
-                      categoryColors[item.type].solid
+                      "flex flex-col sm:flex-row items-start p-4 sm:p-6 hover:bg-muted/50 transition-colors relative",
+                      item.completed && "opacity-60"
                     )}
-                  />
-                  <div className="min-w-[150px] pr-4 mb-4 sm:mb-0">
-                    <div className="text-sm font-medium">{item.time}</div>
-                    <div className="flex items-center gap-2 mt-2">
-                      <Badge
-                        variant="outline"
-                        className={cn(
-                          categoryColors[item.type].bg,
-                          categoryColors[item.type].text
-                        )}
-                      >
-                        {item.type.charAt(0).toUpperCase() + item.type.slice(1)}
-                      </Badge>
-                    </div>
-                  </div>
-                  <div className="flex-1 w-full sm:w-auto">
-                    <div className="flex items-start justify-between">
-                      <h3
-                        className={cn(
-                          "text-base font-semibold tracking-tight",
-                          item.completed && "line-through"
-                        )}
-                      >
-                        {item.title}
-                      </h3>
-                      <div className="flex items-center gap-2">
-                        <div className="flex items-center justify-center w-12 h-12">
-                          <Checkbox
-                            checked={item.completed}
-                            onCheckedChange={() =>
-                              toggleEventCompletion(item.id)
-                            }
-                            className="data-[state=checked]:bg-muted data-[state=checked]:text-muted-foreground"
-                          />
-                        </div>
-                        <Button
+                  >
+                    <div
+                      className={cn(
+                        "absolute left-0 top-0 bottom-0 w-1",
+                        categoryColors[item.type].solid
+                      )}
+                    />
+                    <div className="min-w-[150px] pr-4 mb-4 sm:mb-0">
+                      <div className="text-sm font-medium">{item.time}</div>
+                      <div className="flex items-center gap-2 mt-2">
+                        <Badge
                           variant="outline"
-                          size="icon"
-                          className="dark:bg-muted/50 hover:bg-transparent h-8 w-8"
-                          onClick={() => {
-                            setEventToEdit(item);
-                            setIsEditDialogOpen(true);
-                          }}
+                          className={cn(
+                            categoryColors[item.type].bg,
+                            categoryColors[item.type].text
+                          )}
                         >
-                          <Edit className="h-4 w-4" />
-                        </Button>
-                        <Button
-                          variant="outline"
-                          size="icon"
-                          className="dark:bg-muted/50 hover:bg-transparent hover:text-destructive h-8 w-8"
-                          onClick={() => {
-                            setEventToDelete(item);
-                            setIsDeleteDialogOpen(true);
-                          }}
-                        >
-                          <Trash2 className="h-4 w-4" />
-                        </Button>
+                          {item.type.charAt(0).toUpperCase() +
+                            item.type.slice(1)}
+                        </Badge>
                       </div>
                     </div>
-                    <p className="text-sm text-muted-foreground mt-1 leading-relaxed">
-                      {item.description}
-                    </p>
-                    {item.location && (
-                      <div className="flex items-center gap-4 mt-4">
-                        <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                          <MapPin className="h-4 w-4" />
-                          <span>{item.location}</span>
+                    <div className="flex-1 w-full sm:w-auto">
+                      <div className="flex items-start justify-between">
+                        <h3
+                          className={cn(
+                            "text-base font-semibold tracking-tight",
+                            item.completed && "line-through"
+                          )}
+                        >
+                          {item.title}
+                        </h3>
+                        <div className="flex items-center gap-2">
+                          <div className="flex items-center justify-center w-12 h-12">
+                            <Checkbox
+                              checked={item.completed}
+                              onCheckedChange={() =>
+                                toggleEventCompletion(item._id)
+                              }
+                              className="data-[state=checked]:bg-muted data-[state=checked]:text-muted-foreground"
+                            />
+                          </div>
+                          <Button
+                            variant="outline"
+                            size="icon"
+                            className="dark:bg-muted/50 hover:bg-transparent h-8 w-8"
+                            onClick={() => {
+                              setEventToEdit({
+                                id: item._id,
+                                date: new Date(item.startDate),
+                                time: item.time,
+                                title: item.title,
+                                type: item.type,
+                                description: item.description,
+                                location: item.location,
+                                completed: item.completed,
+                                isAllDay: item.isAllDay,
+                                endDate: item.endDate
+                                  ? new Date(item.endDate)
+                                  : undefined,
+                                recurrence: item.recurrence,
+                              });
+                              setIsEditDialogOpen(true);
+                            }}
+                          >
+                            <Edit className="h-4 w-4" />
+                          </Button>
+                          <Button
+                            variant="outline"
+                            size="icon"
+                            className="dark:bg-muted/50 hover:bg-transparent hover:text-destructive h-8 w-8"
+                            onClick={() => {
+                              setEventToDelete({
+                                id: item._id,
+                                date: new Date(item.startDate),
+                                time: item.time,
+                                title: item.title,
+                                type: item.type,
+                                description: item.description,
+                                location: item.location,
+                                completed: item.completed,
+                                isAllDay: item.isAllDay,
+                                endDate: item.endDate
+                                  ? new Date(item.endDate)
+                                  : undefined,
+                                recurrence: item.recurrence,
+                              });
+                              setIsDeleteDialogOpen(true);
+                            }}
+                          >
+                            <Trash2 className="h-4 w-4" />
+                          </Button>
                         </div>
                       </div>
-                    )}
+                      <p className="text-sm text-muted-foreground mt-1 leading-relaxed">
+                        {item.description}
+                      </p>
+                      {item.location && (
+                        <div className="flex items-center gap-4 mt-4">
+                          <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                            <MapPin className="h-4 w-4" />
+                            <span>{item.location}</span>
+                          </div>
+                        </div>
+                      )}
+                    </div>
                   </div>
+                ))
+              ) : (
+                <div className="p-4 text-center text-sm text-muted-foreground">
+                  No events scheduled for this day
                 </div>
-              ))}
+              )}
             </div>
           </CardContent>
         </Card>
@@ -903,11 +995,23 @@ export default function Calendar() {
                 setEventToDelete(null);
                 setIsDeleteDialogOpen(false);
               }}
+              disabled={isDeleting}
             >
               Cancel
             </Button>
-            <Button variant="destructive" onClick={handleDeleteEvent}>
-              Delete
+            <Button
+              variant="destructive"
+              onClick={handleDeleteEvent}
+              disabled={isDeleting}
+            >
+              {isDeleting ? (
+                <>
+                  <Loader2 className="h-4 w-4 animate-spin" />
+                  Deleting...
+                </>
+              ) : (
+                "Delete"
+              )}
             </Button>
           </DialogFooter>
         </DialogContent>
@@ -984,6 +1088,7 @@ export default function Calendar() {
                 <div className="flex gap-2">
                   <Input
                     type="date"
+                    min={format(new Date(), "yyyy-MM-dd")}
                     value={format(
                       new Date(eventToEdit?.date || new Date()),
                       "yyyy-MM-dd"
@@ -994,6 +1099,14 @@ export default function Calendar() {
                         const currentDate = new Date(eventToEdit.date);
                         newDate.setHours(currentDate.getHours());
                         newDate.setMinutes(currentDate.getMinutes());
+
+                        if (isInPast(newDate)) {
+                          toast.error("Invalid date", {
+                            description: "Cannot set date in the past",
+                          });
+                          return;
+                        }
+
                         setEventToEdit({
                           ...eventToEdit,
                           date: newDate,
@@ -1004,6 +1117,11 @@ export default function Calendar() {
                   {!eventToEdit?.isAllDay && (
                     <Input
                       type="time"
+                      min={
+                        isToday(new Date(eventToEdit?.date || new Date()))
+                          ? getCurrentTimeString()
+                          : undefined
+                      }
                       value={format(
                         new Date(eventToEdit?.date || new Date()),
                         "HH:mm"
@@ -1012,11 +1130,43 @@ export default function Calendar() {
                         if (eventToEdit) {
                           const [hours, minutes] = e.target.value.split(":");
                           const newDate = new Date(eventToEdit.date);
-                          newDate.setHours(parseInt(hours), parseInt(minutes));
+                          newDate.setHours(
+                            parseInt(hours),
+                            parseInt(minutes),
+                            0,
+                            0
+                          );
+
+                          if (isToday(newDate) && !isValidDateTime(newDate)) {
+                            toast.error("Invalid time", {
+                              description:
+                                "Cannot set time earlier than current time",
+                            });
+                            return;
+                          }
+
+                          if (eventToEdit.endDate) {
+                            const endDate = new Date(eventToEdit.endDate);
+                            if (endDate <= newDate) {
+                              const newEndDate = new Date(newDate);
+                              newEndDate.setHours(newDate.getHours() + 1);
+                              setEventToEdit({
+                                ...eventToEdit,
+                                date: newDate,
+                                endDate: newEndDate,
+                                time: `${format(newDate, "hh:mm a")} - ${format(newEndDate, "hh:mm a")}`,
+                              });
+                              return;
+                            }
+                          }
+
                           setEventToEdit({
                             ...eventToEdit,
                             date: newDate,
-                            time: `${format(newDate, "hh:mm a")} - ${format(addHours(newDate, 1), "hh:mm a")}`,
+                            time: `${format(newDate, "hh:mm a")} - ${format(
+                              eventToEdit.endDate || addHours(newDate, 1),
+                              "hh:mm a"
+                            )}`,
                           });
                         }
                       }}
@@ -1029,6 +1179,10 @@ export default function Calendar() {
                 <div className="flex gap-2">
                   <Input
                     type="date"
+                    min={format(
+                      new Date(eventToEdit?.date || new Date()),
+                      "yyyy-MM-dd"
+                    )}
                     value={format(
                       new Date(
                         eventToEdit?.endDate ||
@@ -1044,6 +1198,15 @@ export default function Calendar() {
                         );
                         newDate.setHours(currentEndDate.getHours());
                         newDate.setMinutes(currentEndDate.getMinutes());
+
+                        const startDate = new Date(eventToEdit.date);
+                        if (newDate < startDate) {
+                          toast.error("Invalid date", {
+                            description: "End date cannot be before start date",
+                          });
+                          return;
+                        }
+
                         setEventToEdit({
                           ...eventToEdit,
                           endDate: newDate,
@@ -1055,6 +1218,21 @@ export default function Calendar() {
                   {!eventToEdit?.isAllDay && (
                     <Input
                       type="time"
+                      min={
+                        isToday(new Date(eventToEdit?.endDate || new Date())) &&
+                        isSameDay(
+                          new Date(eventToEdit?.date || new Date()),
+                          new Date(eventToEdit?.endDate || new Date())
+                        )
+                          ? format(
+                              addMinutes(
+                                new Date(eventToEdit?.date || new Date()),
+                                30
+                              ),
+                              "HH:mm"
+                            )
+                          : undefined
+                      }
                       value={format(
                         new Date(
                           eventToEdit?.endDate ||
@@ -1073,8 +1251,42 @@ export default function Calendar() {
                           );
                           newEndDate.setHours(
                             parseInt(hours),
-                            parseInt(minutes)
+                            parseInt(minutes),
+                            0,
+                            0
                           );
+
+                          const startDate = new Date(eventToEdit.date);
+
+                          if (newEndDate <= startDate) {
+                            toast.error("Invalid time", {
+                              description: "End time must be after start time",
+                            });
+                            return;
+                          }
+
+                          if (isSameDay(startDate, newEndDate)) {
+                            const minEndTime = addMinutes(startDate, 30);
+                            if (newEndDate < minEndTime) {
+                              toast.error("Invalid time", {
+                                description:
+                                  "End time must be at least 30 minutes after start time",
+                              });
+                              return;
+                            }
+                          }
+
+                          if (
+                            isToday(newEndDate) &&
+                            !isValidDateTime(newEndDate)
+                          ) {
+                            toast.error("Invalid time", {
+                              description:
+                                "Cannot set time earlier than current time",
+                            });
+                            return;
+                          }
+
                           setEventToEdit({
                             ...eventToEdit,
                             endDate: newEndDate,
@@ -1102,36 +1314,16 @@ export default function Calendar() {
               />
             </div>
             <div className="grid gap-2">
-              <Label>Reminder</Label>
-              <Select
-                value={eventToEdit?.reminder}
-                // onValueChange={(value: Event["reminder"]) =>
-                //   setEventToEdit(
-                //     eventToEdit ? { ...eventToEdit, reminder: value } : null
-                //   )
-                // }
-              >
-                <SelectTrigger>
-                  <SelectValue placeholder="No reminder" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="5min">5 minutes before</SelectItem>
-                  <SelectItem value="15min">15 minutes before</SelectItem>
-                  <SelectItem value="30min">30 minutes before</SelectItem>
-                  <SelectItem value="1hour">1 hour before</SelectItem>
-                  <SelectItem value="1day">1 day before</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
-            <div className="grid gap-2">
               <Label>Recurrence</Label>
               <Select
                 value={eventToEdit?.recurrence || "none"}
-                // onValueChange={(value: Event["recurrence"]) =>
-                //   setEventToEdit(
-                //     eventToEdit ? { ...eventToEdit, recurrence: value } : null
-                //   )
-                // }
+                onValueChange={(
+                  value: "none" | "daily" | "weekly" | "monthly"
+                ) =>
+                  setEventToEdit(
+                    eventToEdit ? { ...eventToEdit, recurrence: value } : null
+                  )
+                }
               >
                 <SelectTrigger>
                   <SelectValue />
@@ -1152,11 +1344,22 @@ export default function Calendar() {
                 setEventToEdit(null);
                 setIsEditDialogOpen(false);
               }}
+              disabled={isEditing}
             >
               Cancel
             </Button>
-            <Button onClick={handleUpdateEvent} disabled={!eventToEdit?.title}>
-              Update Event
+            <Button
+              onClick={handleUpdateEvent}
+              disabled={!eventToEdit?.title || isEditing}
+            >
+              {isEditing ? (
+                <>
+                  <Loader2 className="h-4 w-4 animate-spin" />
+                  Updating...
+                </>
+              ) : (
+                "Update Event"
+              )}
             </Button>
           </DialogFooter>
         </DialogContent>

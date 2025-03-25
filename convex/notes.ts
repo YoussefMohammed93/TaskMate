@@ -6,7 +6,7 @@ export const create = mutation({
   args: {
     title: v.string(),
     content: v.string(),
-    tags: v.array(v.string()), // Change this to expect array of strings
+    tags: v.array(v.string()),
     color: v.string(),
     isPinned: v.boolean(),
     folderId: v.optional(v.string()),

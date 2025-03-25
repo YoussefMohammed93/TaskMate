@@ -1,6 +1,7 @@
 import { v } from "convex/values";
 import { mutation, query } from "./_generated/server";
 
+// Create a new goal
 export const createGoal = mutation({
   args: {
     title: v.string(),
@@ -36,6 +37,7 @@ export const createGoal = mutation({
   },
 });
 
+// Get all goals for the current user
 export const list = query({
   handler: async (ctx) => {
     const identity = await ctx.auth.getUserIdentity();
@@ -52,6 +54,7 @@ export const list = query({
   },
 });
 
+// Update a goal
 export const updateGoal = mutation({
   args: {
     goalId: v.id("goals"),
@@ -81,6 +84,7 @@ export const updateGoal = mutation({
   },
 });
 
+// Delete a goal
 export const deleteGoal = mutation({
   args: { goalId: v.id("goals") },
   handler: async (ctx, args) => {

@@ -2,6 +2,7 @@ import { v, Validator } from "convex/values";
 import { UserJSON } from "@clerk/nextjs/server";
 import { internalMutation, query, QueryCtx } from "./_generated/server";
 
+// Get all users
 export const getUsers = query({
   args: {},
   handler: async (ctx) => {
@@ -9,6 +10,7 @@ export const getUsers = query({
   },
 });
 
+// Get the most recent users
 export const getRecentUsers = query({
   args: {},
   handler: async (ctx) => {
@@ -16,6 +18,7 @@ export const getRecentUsers = query({
   },
 });
 
+// Get the current user
 export const currentUser = query({
   args: {},
   handler: async (ctx) => {
@@ -23,6 +26,7 @@ export const currentUser = query({
   },
 });
 
+// Upsert user from Clerk
 export const upsertFromClerk = internalMutation({
   args: { data: v.any() as Validator<UserJSON> },
   async handler(ctx, { data }) {
@@ -44,6 +48,7 @@ export const upsertFromClerk = internalMutation({
   },
 });
 
+// Delete user from Clerk
 export const deleteFromClerk = internalMutation({
   args: { clerkUserId: v.string() },
   async handler(ctx, { clerkUserId }) {
@@ -57,6 +62,7 @@ export const deleteFromClerk = internalMutation({
   },
 });
 
+// Helper functions
 export async function getCurrentUserOrThrow(ctx: QueryCtx) {
   const userRecord = await getCurrentUser(ctx);
 

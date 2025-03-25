@@ -13,6 +13,7 @@ import type {
   FilterApi,
   FunctionReference,
 } from "convex/server";
+import type * as calendar from "../calendar.js";
 import type * as goals from "../goals.js";
 import type * as http from "../http.js";
 import type * as notes from "../notes.js";
@@ -29,6 +30,7 @@ import type * as users from "../users.js";
  * ```
  */
 declare const fullApi: ApiFromModules<{
+  calendar: typeof calendar;
   goals: typeof goals;
   http: typeof http;
   notes: typeof notes;
