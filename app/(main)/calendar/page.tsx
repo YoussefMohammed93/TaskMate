@@ -741,7 +741,7 @@ export default function Calendar() {
           </Dialog>
         </div>
       </div>
-      <div className="grid grid-cols-1 xl:grid-cols-12 gap-5">
+      <div className="grid grid-cols-1 xl:grid-cols-12 gap-5 md:pt-10">
         <Card className="col-span-1 xl:col-span-5 h-fit">
           <CardHeader className="space-y-4 pb-0">
             <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">

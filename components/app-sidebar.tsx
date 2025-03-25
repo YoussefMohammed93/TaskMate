@@ -3,13 +3,10 @@
 import {
   Calendar,
   Target,
-  BarChart3,
   ListTodo,
   Timer,
   StickyNote,
-  Trophy,
   Settings,
-  ScrollText,
 } from "lucide-react";
 import Link from "next/link";
 import { cn } from "@/lib/utils";
@@ -40,9 +37,9 @@ const mainItems = [
     icon: StickyNote,
   },
   {
-    title: "Pomodoro",
-    url: "/pomodoro",
-    icon: Timer,
+    title: "Goals",
+    url: "/goals",
+    icon: Target,
   },
   {
     title: "Calendar",
@@ -50,24 +47,9 @@ const mainItems = [
     icon: Calendar,
   },
   {
-    title: "Goals",
-    url: "/goals",
-    icon: Target,
-  },
-  {
-    title: "Documents",
-    url: "/documents",
-    icon: ScrollText,
-  },
-  {
-    title: "Analytics",
-    url: "/analytics",
-    icon: BarChart3,
-  },
-  {
-    title: "Leaderboard",
-    url: "/leaderboard",
-    icon: Trophy,
+    title: "Pomodoro",
+    url: "/pomodoro",
+    icon: Timer,
   },
   {
     title: "Settings",

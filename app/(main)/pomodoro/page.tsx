@@ -592,7 +592,7 @@ export default function Pomodoro() {
             <Skeleton className="h-7 w-96 mt-1" />
           </div>
         </div>
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 md:pt-10">
           <Card className="lg:col-span-2">
             <CardContent className="flex flex-col lg:flex-row items-center justify-between gap-8 pt-6">
               <div className="w-full lg:w-1/2 flex flex-col items-center space-y-6">
@@ -668,7 +668,7 @@ export default function Pomodoro() {
             </p>
           </div>
         </div>
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 md:pt-10">
           <Card className="lg:col-span-2">
             <CardContent className="flex flex-col lg:flex-row items-center justify-between gap-8 pt-6">
               <div className="w-full lg:w-1/2 flex flex-col items-center space-y-6">

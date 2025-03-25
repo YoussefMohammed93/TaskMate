@@ -1,12 +1,12 @@
 "use client";
 
 import {
-  Brain,
   Clock,
   Target,
   ListTodo,
   Sparkles,
   MessageSquareMore,
+  Calendar,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 
@@ -15,31 +15,15 @@ const features = [
     icon: ListTodo,
     title: "Task Management",
     description:
-      "Organize your tasks with intuitive drag-and-drop interfaces and smart categorization.",
+      "Organize tasks with priorities, categories, and recurring schedules. Track progress with subtasks and custom tags.",
     color: "md:text-blue-500",
     bgColor: "md:bg-blue-500/5 md:dark:bg-blue-500/10",
-  },
-  {
-    icon: Clock,
-    title: "Pomodoro Timer",
-    description:
-      "Boost productivity with customizable focus sessions and break intervals.",
-    color: "md:text-red-500",
-    bgColor: "md:bg-red-500/5 md:dark:bg-red-500/10",
-  },
-  {
-    icon: Brain,
-    title: "Mind Mapping",
-    description:
-      "Visualize your ideas and connect thoughts with interactive mind maps.",
-    color: "md:text-purple-500",
-    bgColor: "md:bg-purple-500/5 md:dark:bg-purple-500/10",
   },
   {
     icon: MessageSquareMore,
     title: "Smart Notes",
     description:
-      "Create, organize, and link your notes with powerful formatting options.",
+      "Create and organize notes with tags, colors, and folders. Pin important notes and use powerful formatting tools.",
     color: "md:text-green-500",
     bgColor: "md:bg-green-500/5 md:dark:bg-green-500/10",
   },
@@ -47,15 +31,31 @@ const features = [
     icon: Target,
     title: "Goal Tracking",
     description:
-      "Set, monitor, and achieve your goals with progress visualization.",
+      "Set personal, work, and health goals with milestones. Monitor progress and track completion rates.",
     color: "md:text-orange-500",
     bgColor: "md:bg-orange-500/5 md:dark:bg-orange-500/10",
   },
   {
-    icon: Sparkles,
-    title: "AI Assistant",
+    icon: Clock,
+    title: "Pomodoro Timer",
     description:
-      "Get intelligent suggestions and task optimization recommendations.",
+      "Stay focused with customizable work sessions and break intervals. Track your productivity streaks.",
+    color: "md:text-red-500",
+    bgColor: "md:bg-red-500/5 md:dark:bg-red-500/10",
+  },
+  {
+    icon: Calendar,
+    title: "Calendar Integration",
+    description:
+      "Schedule tasks and events with recurring options. View your commitments in daily, weekly, or monthly formats.",
+    color: "md:text-purple-500",
+    bgColor: "md:bg-purple-500/5 md:dark:bg-purple-500/10",
+  },
+  {
+    icon: Sparkles,
+    title: "Smart Dashboard",
+    description:
+      "Get an overview of your tasks, goals, and upcoming events all in one organized workspace.",
     color: "md:text-pink-500",
     bgColor: "md:bg-pink-500/5 md:dark:bg-pink-500/10",
   },

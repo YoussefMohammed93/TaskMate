@@ -4,7 +4,14 @@ import Link from "next/link";
 import { cn } from "@/lib/utils";
 import { useAuth } from "@clerk/nextjs";
 import { Button } from "@/components/ui/button";
-import { ArrowRight, Crown, Infinity, Trophy, Sparkles } from "lucide-react";
+import {
+  ArrowRight,
+  Crown,
+  Infinity,
+  Trophy,
+  Sparkles,
+  Target,
+} from "lucide-react";
 
 const features = [
   {
@@ -20,10 +27,10 @@ const features = [
     description: "Unlock advanced productivity tools",
   },
   {
-    text: "Monthly Leaderboard",
-    icon: "Trophy",
+    text: "Goal Tracking",
+    icon: "Target",
     color: "text-blue-500",
-    description: "Compete with other users and track progress",
+    description: "Set and achieve personal milestones",
   },
 ] as const;
 
@@ -35,6 +42,8 @@ const IconComponent = ({ icon, color }: { icon: string; color: string }) => {
       return <Crown aria-hidden="true" className={cn("size-4", color)} />;
     case "Trophy":
       return <Trophy aria-hidden="true" className={cn("size-4", color)} />;
+    case "Target":
+      return <Target aria-hidden="true" className={cn("size-4", color)} />;
     default:
       return null;
   }
@@ -50,11 +59,11 @@ export function Hero() {
     >
       <div
         role="presentation"
-        className="absolute hidden md:block top-24 -left-64 w-96 h-96 bg-sky-500/15 dark:bg-primary/15 rounded-full blur-3xl"
+        className="absolute hidden md:block top-24 -left-64 w-96 h-96 bg-blue-500/20 dark:bg-primary/15 rounded-full blur-3xl"
       />
       <div
         role="presentation"
-        className="absolute hidden md:block top-12 -right-64 w-96 h-96 bg-orange-500/10 dark:bg-primary/10 rounded-full blur-3xl"
+        className="absolute hidden md:block top-12 -right-64 w-96 h-96 bg-pink-500/15 dark:bg-primary/10 rounded-full blur-3xl"
       />
       <div className="relative text-center mx-auto max-w-[1280px] px-5">
         <div
