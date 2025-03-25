@@ -79,4 +79,22 @@ export default defineSchema({
       })
     ),
   }).index("by_user", ["userId"]),
+
+  pomodoroSettings: defineTable({
+    userId: v.string(),
+    work: v.number(),
+    shortBreak: v.number(),
+    longBreak: v.number(),
+  }).index("by_user", ["userId"]),
+
+  pomodoroSessions: defineTable({
+    userId: v.string(),
+    mode: v.string(),
+    totalSeconds: v.number(),
+    remainingSeconds: v.number(),
+    isRunning: v.boolean(),
+    startedAt: v.string(),
+    lastPausedAt: v.optional(v.string()),
+    completed: v.boolean(),
+  }).index("by_user", ["userId"]),
 });

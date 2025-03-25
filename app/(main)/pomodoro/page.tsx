@@ -25,13 +25,16 @@ import {
   DialogTrigger,
 } from "@/components/ui/dialog";
 import { cn } from "@/lib/utils";
-import { useState, useEffect } from "react";
 import { Label } from "@/components/ui/label";
+import { api } from "@/convex/_generated/api";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import { Id } from "@/convex/_generated/dataModel";
+import { useRef, useState, useEffect } from "react";
 import "react-circular-progressbar/dist/styles.css";
 import { Skeleton } from "@/components/ui/skeleton";
+import { useQuery, useMutation } from "convex/react";
 import quotes from "@/data/motivational-quotes.json";
 import { ChevronLeft, ChevronRight } from "lucide-react";
 import { Heart, Trophy, Sparkles, Quote } from "lucide-react";
@@ -108,12 +111,241 @@ const DEFAULT_SETTINGS = {
   longBreak: 10,
 };
 
-export default function Pomodoro() {
+class Timer {
+  private timerId: number | null = null;
+  private startTime: number = 0;
+  private remaining: number = 0;
+  private readonly onTick: (timeLeft: number) => void;
+  private readonly onComplete: () => void;
+
+  constructor(onTick: (timeLeft: number) => void, onComplete: () => void) {
+    this.onTick = onTick;
+    this.onComplete = onComplete;
+  }
+
+  start(durationInSeconds: number) {
+    if (this.timerId) this.stop();
+
+    this.remaining = durationInSeconds;
+    this.startTime = Date.now();
+
+    this.timerId = window.setInterval(() => {
+      const elapsed = Math.floor((Date.now() - this.startTime) / 1000);
+      this.remaining = Math.max(0, durationInSeconds - elapsed);
+
+      this.onTick(this.remaining);
+
+      if (this.remaining === 0) {
+        this.stop();
+        this.onComplete();
+      }
+    }, 1000);
+  }
+
+  stop() {
+    if (this.timerId) {
+      window.clearInterval(this.timerId);
+      this.timerId = null;
+    }
+  }
+
+  isRunning() {
+    return this.timerId !== null;
+  }
+
+  getTimeLeft() {
+    return this.remaining;
+  }
+}
+
+function useTimer(
+  savedSettings:
+    | { work: number; shortBreak: number; longBreak: number }
+    | undefined,
+  activeSession:
+    | {
+        _id: string;
+        mode: string;
+        isRunning: boolean;
+        remainingSeconds: number;
+        totalSeconds: number;
+      }
+    | undefined
+) {
   const [mode, setMode] = useState<"work" | "shortBreak" | "longBreak">("work");
   const [isRunning, setIsRunning] = useState(false);
   const [timeLeft, setTimeLeft] = useState(DEFAULT_SETTINGS.work * 60);
   const [progress, setProgress] = useState(100);
-  const [settings, setSettings] = useState(DEFAULT_SETTINGS);
+
+  const timerRef = useRef<Timer | null>(null);
+  const initRef = useRef(false);
+
+  const startSession = useMutation(api.pomodoro.startSession);
+  const updateSessionStatus = useMutation(api.pomodoro.updateSessionStatus);
+  const completeSession = useMutation(api.pomodoro.completeSession);
+
+  const updateProgress = (currentTime: number) => {
+    const totalTime = (savedSettings?.[mode] || DEFAULT_SETTINGS[mode]) * 60;
+    setProgress((currentTime / totalTime) * 100);
+  };
+
+  const initializeSession = () => {
+    if (initRef.current) return;
+    initRef.current = true;
+
+    if (activeSession && !Array.isArray(activeSession)) {
+      setMode(activeSession.mode as "work" | "shortBreak" | "longBreak");
+
+      setTimeLeft(activeSession.remainingSeconds);
+
+      setProgress(
+        (activeSession.remainingSeconds / activeSession.totalSeconds) * 100
+      );
+
+      setIsRunning(false);
+
+      if (!timerRef.current) {
+        timerRef.current = new Timer(
+          (remaining) => {
+            setTimeLeft(remaining);
+            updateProgress(remaining);
+
+            updateSessionStatus({
+              sessionId: activeSession._id as Id<"pomodoroSessions">,
+              isRunning: true,
+              remainingSeconds: remaining,
+            });
+          },
+          async () => {
+            setIsRunning(false);
+            await completeSession({
+              sessionId: activeSession._id as Id<"pomodoroSessions">,
+            });
+          }
+        );
+      }
+    } else if (savedSettings && !Array.isArray(savedSettings)) {
+      setTimeLeft(savedSettings[mode] * 60);
+      setProgress(100);
+    }
+  };
+
+  const startTimer = async () => {
+    if (!timerRef.current) {
+      timerRef.current = new Timer(
+        (remaining) => {
+          setTimeLeft(remaining);
+          updateProgress(remaining);
+
+          if (activeSession && !Array.isArray(activeSession)) {
+            updateSessionStatus({
+              sessionId: activeSession._id as Id<"pomodoroSessions">,
+              isRunning: true,
+              remainingSeconds: remaining,
+            });
+          }
+        },
+        async () => {
+          setIsRunning(false);
+          if (activeSession && !Array.isArray(activeSession)) {
+            await completeSession({
+              sessionId: activeSession._id as Id<"pomodoroSessions">,
+            });
+          }
+        }
+      );
+    }
+
+    if (!activeSession || Array.isArray(activeSession)) {
+      await startSession({
+        mode,
+        totalSeconds: timeLeft,
+      });
+    } else {
+      await updateSessionStatus({
+        sessionId: activeSession._id as Id<"pomodoroSessions">,
+        isRunning: true,
+        remainingSeconds: timeLeft,
+      });
+    }
+
+    timerRef.current.start(timeLeft);
+    setIsRunning(true);
+  };
+
+  const pauseTimer = async () => {
+    if (timerRef.current) {
+      timerRef.current.stop();
+      setIsRunning(false);
+
+      if (activeSession && !Array.isArray(activeSession)) {
+        await updateSessionStatus({
+          sessionId: activeSession._id as Id<"pomodoroSessions">,
+          isRunning: false,
+          remainingSeconds: timeLeft,
+        });
+      }
+    }
+  };
+
+  const handleModeChange = async (
+    newMode: "work" | "shortBreak" | "longBreak"
+  ) => {
+    if (timerRef.current) {
+      timerRef.current.stop();
+    }
+
+    if (activeSession && !Array.isArray(activeSession)) {
+      await completeSession({
+        sessionId: activeSession._id as Id<"pomodoroSessions">,
+      });
+    }
+
+    setMode(newMode);
+    const newTime =
+      (savedSettings?.[newMode] || DEFAULT_SETTINGS[newMode]) * 60;
+    setTimeLeft(newTime);
+    setProgress(100);
+    setIsRunning(false);
+  };
+
+  const handleReset = async () => {
+    if (timerRef.current) {
+      timerRef.current.stop();
+    }
+
+    if (activeSession && !Array.isArray(activeSession)) {
+      await completeSession({
+        sessionId: activeSession._id as Id<"pomodoroSessions">,
+      });
+    }
+
+    const newTime = (savedSettings?.[mode] || DEFAULT_SETTINGS[mode]) * 60;
+    setTimeLeft(newTime);
+    setProgress(100);
+    setIsRunning(false);
+  };
+
+  return {
+    mode,
+    isRunning,
+    timeLeft,
+    setTimeLeft,
+    progress,
+    startTimer,
+    pauseTimer,
+    handleModeChange,
+    handleReset,
+    initializeSession,
+  };
+}
+
+export default function Pomodoro() {
+  const savedSettings = useQuery(api.pomodoro.getSettings);
+  const activeSession = useQuery(api.pomodoro.getActiveSession);
+  const saveSettings = useMutation(api.pomodoro.saveSettings);
+  const completeSession = useMutation(api.pomodoro.completeSession);
+  const updateSessionStatus = useMutation(api.pomodoro.updateSessionStatus);
   const [isSettingsOpen, setIsSettingsOpen] = useState(false);
   const [tempSettings, setTempSettings] = useState({ ...DEFAULT_SETTINGS });
   const [currentQuote, setCurrentQuote] = useState({
@@ -124,14 +356,58 @@ export default function Pomodoro() {
     theme: "",
     backgroundColor: "",
     icon: "",
+    index: 0,
   });
   const [isQuoteLoading, setIsQuoteLoading] = useState(true);
-  const [, setQuoteIndex] = useState(0);
   const [isTransitioning, setIsTransitioning] = useState(false);
+
+  const {
+    mode,
+    isRunning,
+    timeLeft,
+    setTimeLeft,
+    progress,
+    startTimer,
+    pauseTimer,
+    handleModeChange,
+    handleReset,
+    initializeSession,
+  } = useTimer(
+    savedSettings && !Array.isArray(savedSettings) && savedSettings !== null
+      ? {
+          work: savedSettings.work,
+          shortBreak: savedSettings.shortBreak,
+          longBreak: savedSettings.longBreak,
+        }
+      : undefined,
+    activeSession && !Array.isArray(activeSession) && activeSession !== null
+      ? {
+          _id: activeSession._id,
+          mode: activeSession.mode,
+          isRunning: activeSession.isRunning,
+          remainingSeconds: activeSession.remainingSeconds,
+          totalSeconds: activeSession.totalSeconds,
+        }
+      : undefined
+  );
+
+  useEffect(() => {
+    if (activeSession !== undefined) {
+      initializeSession();
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [activeSession]);
+
+  const handleTimerControl = () => {
+    if (isRunning) {
+      pauseTimer();
+    } else {
+      startTimer();
+    }
+  };
 
   useEffect(() => {
     const randomIndex = Math.floor(Math.random() * quotes.quotes.length);
-    setQuoteIndex(randomIndex);
     setCurrentQuote({
       text: quotes.quotes[randomIndex].text || "",
       author: quotes.quotes[randomIndex].author || "",
@@ -140,35 +416,31 @@ export default function Pomodoro() {
       theme: quotes.quotes[randomIndex].theme || "",
       backgroundColor: quotes.quotes[randomIndex].backgroundColor || "",
       icon: quotes.quotes[randomIndex].icon || "",
+      index: randomIndex,
     });
     setIsQuoteLoading(false);
   }, []);
 
-  const handleModeChange = (newMode: "work" | "shortBreak" | "longBreak") => {
-    setMode(newMode);
-    setTimeLeft(settings[newMode] * 60);
-    setProgress(100);
-    setIsRunning(false);
-  };
-
-  const handleReset = () => {
-    setTimeLeft(settings[mode] * 60);
-    setProgress(100);
-    setIsRunning(false);
-  };
-
-  const handleSettingsOpen = (open: boolean) => {
-    setIsSettingsOpen(open);
-  };
-
-  const formatTime = (seconds: number): string => {
-    const mins = Math.floor(seconds / 60);
-    const secs = seconds % 60;
-    return `${mins}:${secs.toString().padStart(2, "0")}`;
+  const handleQuoteChange = (direction: "next" | "prev") => {
+    setIsTransitioning(true);
+    setTimeout(() => {
+      setCurrentQuote((current) => {
+        const totalQuotes = quotes.quotes.length;
+        const newIndex =
+          direction === "next"
+            ? (current.index + 1) % totalQuotes
+            : (current.index - 1 + totalQuotes) % totalQuotes;
+        return {
+          ...quotes.quotes[newIndex],
+          index: newIndex,
+        };
+      });
+      setIsTransitioning(false);
+    }, 200);
   };
 
   const handleSettingChange = (
-    setting: keyof typeof settings,
+    setting: keyof typeof tempSettings,
     value: string
   ) => {
     const numValue = parseInt(value, 10);
@@ -180,52 +452,43 @@ export default function Pomodoro() {
     }
   };
 
-  const handleSaveSettings = () => {
-    setSettings(tempSettings);
+  const handleSaveSettings = async () => {
+    await saveSettings(tempSettings);
     setIsSettingsOpen(false);
     setTimeLeft(tempSettings[mode] * 60);
-    setProgress(100);
+
+    if (activeSession && !Array.isArray(activeSession)) {
+      await completeSession({ sessionId: activeSession._id });
+    }
   };
 
-  const handleQuoteChange = (direction: "next" | "prev") => {
-    setIsTransitioning(true);
-    setTimeout(() => {
-      setQuoteIndex((current) => {
-        const totalQuotes = quotes.quotes.length;
-        const newIndex =
-          direction === "next"
-            ? (current + 1) % totalQuotes
-            : (current - 1 + totalQuotes) % totalQuotes;
-        setCurrentQuote({
-          text: quotes.quotes[newIndex].text || "",
-          author: quotes.quotes[newIndex].author || "",
-          role: quotes.quotes[newIndex].role || "",
-          category: quotes.quotes[newIndex].category || "",
-          theme: quotes.quotes[newIndex].theme || "",
-          backgroundColor: quotes.quotes[newIndex].backgroundColor || "",
-          icon: quotes.quotes[newIndex].icon || "",
-        });
-        return newIndex;
-      });
-      setIsTransitioning(false);
-    }, 200);
+  const formatTime = (seconds: number): string => {
+    const mins = Math.floor(seconds / 60);
+    const secs = seconds % 60;
+    return `${mins}:${secs.toString().padStart(2, "0")}`;
+  };
+
+  const handleSettingsOpen = (open: boolean) => {
+    setIsSettingsOpen(open);
   };
 
   useEffect(() => {
-    let interval: NodeJS.Timeout;
-
-    if (isRunning && timeLeft > 0) {
-      interval = setInterval(() => {
-        setTimeLeft((prev) => {
-          const newTime = prev - 1;
-          setProgress((newTime / (settings[mode] * 60)) * 100);
-          return newTime;
+    const handleBeforeUnload = async () => {
+      if (activeSession && !Array.isArray(activeSession)) {
+        await updateSessionStatus({
+          sessionId: activeSession._id,
+          isRunning: false,
+          remainingSeconds: timeLeft,
         });
-      }, 1000);
-    }
+      }
+    };
 
-    return () => clearInterval(interval);
-  }, [isRunning, timeLeft, mode, settings]);
+    window.addEventListener("beforeunload", handleBeforeUnload);
+
+    return () => {
+      window.removeEventListener("beforeunload", handleBeforeUnload);
+    };
+  }, [activeSession, timeLeft, updateSessionStatus]);
 
   return (
     <div className="pb-2 space-y-6">
@@ -264,7 +527,7 @@ export default function Pomodoro() {
                   <Tooltip>
                     <TooltipTrigger asChild>
                       <Button
-                        onClick={() => setIsRunning(!isRunning)}
+                        onClick={handleTimerControl}
                         size="lg"
                         className={`h-14 w-14 rounded-full p-0 transition-all ${
                           isRunning
@@ -331,7 +594,7 @@ export default function Pomodoro() {
                               value={value}
                               onChange={(e) =>
                                 handleSettingChange(
-                                  key as keyof typeof settings,
+                                  key as keyof typeof tempSettings,
                                   e.target.value
                                 )
                               }
@@ -438,13 +701,13 @@ export default function Pomodoro() {
           ) : (
             <div className="relative h-full">
               <div
-                className="absolute top-0 left-0 w-full h-1.5 bg-gradient-to-r"
+                className="absolute hidden md:block top-0 left-0 w-full h-1.5 bg-gradient-to-r md:bg-none"
                 style={{
                   backgroundImage: `linear-gradient(to right, ${currentQuote.backgroundColor}50, ${currentQuote.backgroundColor}25)`,
                 }}
               />
               <div
-                className="absolute -right-20 -top-20 w-48 h-48 rounded-full blur-3xl opacity-20"
+                className="absolute hidden md:block -right-20 -top-20 w-48 h-48 rounded-full blur-3xl opacity-20 bg-muted/50 md:bg-none"
                 style={{ backgroundColor: currentQuote.backgroundColor }}
               />
 
@@ -453,10 +716,12 @@ export default function Pomodoro() {
                   <div className="w-full flex items-center justify-between gap-3">
                     <div
                       className={cn(
-                        "p-2 rounded-xl",
-                        QUOTE_COLORS[
-                          currentQuote.backgroundColor as keyof typeof QUOTE_COLORS
-                        ].bgLight
+                        "p-2 rounded-xl bg-muted/50",
+                        `md:${
+                          QUOTE_COLORS[
+                            currentQuote.backgroundColor as keyof typeof QUOTE_COLORS
+                          ].bgLight
+                        }`
                       )}
                     >
                       {(() => {
@@ -465,9 +730,12 @@ export default function Pomodoro() {
                           <Icon
                             className={cn(
                               "h-5 w-5",
-                              QUOTE_COLORS[
-                                currentQuote.backgroundColor as keyof typeof QUOTE_COLORS
-                              ].text
+                              "text-foreground",
+                              `md:${
+                                QUOTE_COLORS[
+                                  currentQuote.backgroundColor as keyof typeof QUOTE_COLORS
+                                ].text
+                              }`
                             )}
                           />
                         );
@@ -476,12 +744,17 @@ export default function Pomodoro() {
                     <Badge
                       variant="outline"
                       className={cn(
-                        QUOTE_COLORS[
-                          currentQuote.backgroundColor as keyof typeof QUOTE_COLORS
-                        ].bgLight,
-                        QUOTE_COLORS[
-                          currentQuote.backgroundColor as keyof typeof QUOTE_COLORS
-                        ].text
+                        "bg-muted/50",
+                        `md:${
+                          QUOTE_COLORS[
+                            currentQuote.backgroundColor as keyof typeof QUOTE_COLORS
+                          ].bgLight
+                        }`,
+                        `md:${
+                          QUOTE_COLORS[
+                            currentQuote.backgroundColor as keyof typeof QUOTE_COLORS
+                          ].text
+                        }`
                       )}
                     >
                       {currentQuote.category}
@@ -506,12 +779,17 @@ export default function Pomodoro() {
                       <div
                         className={cn(
                           "w-10 h-10 rounded-full flex items-center justify-center text-lg font-semibold",
-                          QUOTE_COLORS[
-                            currentQuote.backgroundColor as keyof typeof QUOTE_COLORS
-                          ].bgLight,
-                          QUOTE_COLORS[
-                            currentQuote.backgroundColor as keyof typeof QUOTE_COLORS
-                          ].text
+                          "bg-muted/50 text-foreground",
+                          `md:${
+                            QUOTE_COLORS[
+                              currentQuote.backgroundColor as keyof typeof QUOTE_COLORS
+                            ].bgLight
+                          }`,
+                          `md:${
+                            QUOTE_COLORS[
+                              currentQuote.backgroundColor as keyof typeof QUOTE_COLORS
+                            ].text
+                          }`
                         )}
                       >
                         {currentQuote.author.charAt(0)}

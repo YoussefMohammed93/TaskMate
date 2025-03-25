@@ -16,6 +16,7 @@ import type {
 import type * as goals from "../goals.js";
 import type * as http from "../http.js";
 import type * as notes from "../notes.js";
+import type * as pomodoro from "../pomodoro.js";
 import type * as tasks from "../tasks.js";
 import type * as users from "../users.js";
 
@@ -31,6 +32,7 @@ declare const fullApi: ApiFromModules<{
   goals: typeof goals;
   http: typeof http;
   notes: typeof notes;
+  pomodoro: typeof pomodoro;
   tasks: typeof tasks;
   users: typeof users;
 }>;
