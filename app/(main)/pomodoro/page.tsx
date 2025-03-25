@@ -8,7 +8,9 @@ import {
   Bell,
   Coffee,
   Brain,
+  Loader2,
 } from "lucide-react";
+import { toast } from "sonner";
 import {
   Tooltip,
   TooltipContent,
@@ -170,7 +172,8 @@ function useTimer(
         remainingSeconds: number;
         totalSeconds: number;
       }
-    | undefined
+    | undefined,
+  playAlarmSound: () => void
 ) {
   const [mode, setMode] = useState<"work" | "shortBreak" | "longBreak">("work");
   const [isRunning, setIsRunning] = useState(false);
@@ -185,9 +188,12 @@ function useTimer(
   const completeSession = useMutation(api.pomodoro.completeSession);
 
   const updateProgress = (currentTime: number) => {
-    const totalTime = (savedSettings?.[mode] || DEFAULT_SETTINGS[mode]) * 60;
+    const totalTime =
+      activeSession?.totalSeconds ??
+      (savedSettings?.[mode] || DEFAULT_SETTINGS[mode]) * 60;
+
     const currentProgress = (currentTime / totalTime) * 100;
-    setProgress(Math.max(0, Math.min(100, currentProgress))); // Ensure progress stays between 0-100
+    setProgress(Math.max(0, Math.min(100, currentProgress)));
   };
 
   const initializeSession = () => {
@@ -197,10 +203,11 @@ function useTimer(
     if (activeSession && !Array.isArray(activeSession)) {
       setMode(activeSession.mode as "work" | "shortBreak" | "longBreak");
       setTimeLeft(activeSession.remainingSeconds);
+
       setProgress(
         (activeSession.remainingSeconds / activeSession.totalSeconds) * 100
       );
-      // Set isRunning based on the active session's state
+
       setIsRunning(activeSession.isRunning);
 
       if (!timerRef.current) {
@@ -216,13 +223,13 @@ function useTimer(
           },
           async () => {
             setIsRunning(false);
+            playAlarmSound();
             await completeSession({
               sessionId: activeSession._id as Id<"pomodoroSessions">,
             });
           }
         );
 
-        // If the session is running, start the timer immediately
         if (activeSession.isRunning) {
           timerRef.current.start(activeSession.remainingSeconds);
         }
@@ -250,6 +257,7 @@ function useTimer(
         },
         async () => {
           setIsRunning(false);
+          playAlarmSound();
           if (activeSession && !Array.isArray(activeSession)) {
             await completeSession({
               sessionId: activeSession._id as Id<"pomodoroSessions">,
@@ -365,6 +373,24 @@ export default function Pomodoro() {
   });
   const [isQuoteLoading, setIsQuoteLoading] = useState(true);
   const [isTransitioning, setIsTransitioning] = useState(false);
+  const [isSavingSettings, setIsSavingSettings] = useState(false);
+  const [isLoading, setIsLoading] = useState(true);
+  const audioRef = useRef<HTMLAudioElement | null>(null);
+
+  const playAlarmSound = () => {
+    try {
+      if (audioRef.current) {
+        audioRef.current.currentTime = 0;
+        audioRef.current.play().catch((error) => {
+          console.error("Error playing sound:", error);
+        });
+      }
+    } catch (error) {
+      console.error("Error playing sound:", error);
+    }
+  };
+
+  const initialMode = activeSession?.mode || "work";
 
   const {
     mode,
@@ -393,7 +419,8 @@ export default function Pomodoro() {
           remainingSeconds: activeSession.remainingSeconds,
           totalSeconds: activeSession.totalSeconds,
         }
-      : undefined
+      : undefined,
+    playAlarmSound
   );
 
   useEffect(() => {
@@ -448,22 +475,69 @@ export default function Pomodoro() {
     setting: keyof typeof tempSettings,
     value: string
   ) => {
-    const numValue = parseInt(value, 10);
-    if (!isNaN(numValue)) {
+    if (value === "") {
       setTempSettings((prev) => ({
         ...prev,
-        [setting]: numValue,
+        [setting]: 1,
       }));
+      return;
+    }
+
+    const numValue = parseInt(value, 10);
+    if (!isNaN(numValue)) {
+      if (numValue >= 1 && numValue <= 60) {
+        setTempSettings((prev) => ({
+          ...prev,
+          [setting]: numValue,
+        }));
+      }
+    }
+  };
+
+  const handleSettingsOpen = (open: boolean) => {
+    setIsSettingsOpen(open);
+    if (open && savedSettings && !Array.isArray(savedSettings)) {
+      setTempSettings({
+        work: savedSettings.work,
+        shortBreak: savedSettings.shortBreak,
+        longBreak: savedSettings.longBreak,
+      });
     }
   };
 
   const handleSaveSettings = async () => {
-    await saveSettings(tempSettings);
-    setIsSettingsOpen(false);
-    setTimeLeft(tempSettings[mode] * 60);
+    setIsSavingSettings(true);
+    const toastId = toast.loading("Saving settings...");
 
-    if (activeSession && !Array.isArray(activeSession)) {
-      await completeSession({ sessionId: activeSession._id });
+    try {
+      await saveSettings(tempSettings);
+      setIsSettingsOpen(false);
+      setTimeLeft(tempSettings[mode] * 60);
+
+      if (activeSession && !Array.isArray(activeSession)) {
+        await completeSession({ sessionId: activeSession._id });
+      }
+
+      if (savedSettings && !Array.isArray(savedSettings)) {
+        setTempSettings({
+          work: tempSettings.work,
+          shortBreak: tempSettings.shortBreak,
+          longBreak: tempSettings.longBreak,
+        });
+      }
+
+      toast.success("Settings saved successfully", {
+        id: toastId,
+        description: "Your timer settings have been updated.",
+      });
+    } catch (error) {
+      console.error("Failed to save settings:", error);
+      toast.error("Failed to save settings", {
+        id: toastId,
+        description: "Please try again later.",
+      });
+    } finally {
+      setIsSavingSettings(false);
     }
   };
 
@@ -471,10 +545,6 @@ export default function Pomodoro() {
     const mins = Math.floor(seconds / 60);
     const secs = seconds % 60;
     return `${mins}:${secs.toString().padStart(2, "0")}`;
-  };
-
-  const handleSettingsOpen = (open: boolean) => {
-    setIsSettingsOpen(open);
   };
 
   useEffect(() => {
@@ -495,185 +565,60 @@ export default function Pomodoro() {
     };
   }, [activeSession, timeLeft, updateSessionStatus]);
 
-  return (
-    <div className="pb-2 space-y-6">
-      <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
-        <div>
-          <h1 className="text-3xl font-light tracking-tight">Pomodoro Timer</h1>
-          <p className="text-muted-foreground mt-1 text-xl font-light">
-            Stay focused and maintain a healthy work-rest balance
-          </p>
+  useEffect(() => {
+    audioRef.current = new Audio("/alarm.mp3");
+    audioRef.current.preload = "auto";
+
+    return () => {
+      if (audioRef.current) {
+        audioRef.current.pause();
+        audioRef.current.src = "";
+      }
+    };
+  }, []);
+
+  useEffect(() => {
+    if (savedSettings !== undefined && activeSession !== undefined) {
+      setIsLoading(false);
+    }
+  }, [savedSettings, activeSession]);
+
+  if (isLoading) {
+    return (
+      <div className="pb-2 space-y-6">
+        <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+          <div>
+            <Skeleton className="h-9 w-64" />
+            <Skeleton className="h-7 w-96 mt-1" />
+          </div>
         </div>
-      </div>
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        <Card className="lg:col-span-2">
-          <CardContent className="flex flex-col lg:flex-row items-center justify-between gap-8 pt-6">
-            <div className="w-full lg:w-1/2 flex flex-col items-center space-y-6">
-              <div className="w-60 h-60 sm:w-72 sm:h-72 relative">
-                <CircularProgressbar
-                  value={progress}
-                  text={formatTime(timeLeft)}
-                  styles={buildStyles({
-                    textSize: "16px",
-                    pathColor: TIMER_MODES[mode].color,
-                    textColor: TIMER_MODES[mode].color,
-                    trailColor: "hsl(var(--muted) / 0.3)",
-                    pathTransitionDuration: 0.5,
-                  })}
-                />
-                <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
-                  <div className="text-sm text-muted-foreground mt-16">
-                    {TIMER_MODES[mode].label} Time
-                  </div>
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+          <Card className="lg:col-span-2">
+            <CardContent className="flex flex-col lg:flex-row items-center justify-between gap-8 pt-6">
+              <div className="w-full lg:w-1/2 flex flex-col items-center space-y-6">
+                <Skeleton className="w-60 h-60 sm:w-72 sm:h-72 rounded-full" />
+                <div className="flex gap-4">
+                  <Skeleton className="h-14 w-14 rounded-full" />
+                  <Skeleton className="h-14 w-14 rounded-full" />
+                  <Skeleton className="h-14 w-14 rounded-full" />
                 </div>
               </div>
-              <div className="flex gap-4">
-                <TooltipProvider delayDuration={200}>
-                  <Tooltip>
-                    <TooltipTrigger asChild>
-                      <Button
-                        onClick={handleTimerControl}
-                        size="lg"
-                        className={`h-14 w-14 rounded-full p-0 transition-all ${
-                          isRunning
-                            ? "bg-destructive hover:bg-destructive/90"
-                            : "bg-primary hover:bg-primary/90"
-                        }`}
-                      >
-                        {isRunning ? (
-                          <Pause className="h-6 w-6" />
-                        ) : (
-                          <Play className="h-6 w-6 ml-0.5" />
-                        )}
-                      </Button>
-                    </TooltipTrigger>
-                    <TooltipContent>
-                      <p>{isRunning ? "Pause" : "Start"} timer</p>
-                    </TooltipContent>
-                  </Tooltip>
-                  <Tooltip>
-                    <TooltipTrigger asChild>
-                      <Button
-                        onClick={handleReset}
-                        variant="outline"
-                        size="icon"
-                        className="h-14 w-14 rounded-full"
-                      >
-                        <RotateCcw className="h-5 w-5" />
-                      </Button>
-                    </TooltipTrigger>
-                    <TooltipContent>Reset timer</TooltipContent>
-                  </Tooltip>
-                  <Dialog
-                    open={isSettingsOpen}
-                    onOpenChange={handleSettingsOpen}
-                  >
-                    <Tooltip>
-                      <TooltipTrigger asChild>
-                        <DialogTrigger asChild>
-                          <Button
-                            variant="outline"
-                            size="icon"
-                            className="h-14 w-14 rounded-full"
-                          >
-                            <Settings className="h-5 w-5" />
-                          </Button>
-                        </DialogTrigger>
-                      </TooltipTrigger>
-                      <TooltipContent>Settings</TooltipContent>
-                    </Tooltip>
-                    <DialogContent className="sm:max-w-[400px]">
-                      <DialogHeader>
-                        <DialogTitle>Timer Settings</DialogTitle>
-                      </DialogHeader>
-                      <div className="grid gap-4 py-4">
-                        {Object.entries(tempSettings).map(([key, value]) => (
-                          <div key={key} className="grid gap-2">
-                            <Label htmlFor={key} className="capitalize">
-                              {key.replace(/([A-Z])/g, " $1").trim()} Time
-                              (minutes)
-                            </Label>
-                            <Input
-                              id={key}
-                              type="number"
-                              value={value}
-                              onChange={(e) =>
-                                handleSettingChange(
-                                  key as keyof typeof tempSettings,
-                                  e.target.value
-                                )
-                              }
-                              min={1}
-                              max={60}
-                              className="dark:bg-muted/50"
-                            />
-                          </div>
-                        ))}
-                      </div>
-                      <DialogFooter>
-                        <DialogClose asChild>
-                          <Button variant="outline">Cancel</Button>
-                        </DialogClose>
-                        <Button onClick={handleSaveSettings}>
-                          Save Changes
-                        </Button>
-                      </DialogFooter>
-                    </DialogContent>
-                  </Dialog>
-                </TooltipProvider>
+              <div className="w-full lg:w-1/2 space-y-6">
+                <Skeleton className="h-10 w-full rounded-lg" />
+                <Card className="border-none bg-muted/80">
+                  <CardContent className="p-6">
+                    <div className="flex items-center gap-3 mb-4">
+                      <Skeleton className="h-5 w-5" />
+                      <Skeleton className="h-7 w-32" />
+                    </div>
+                    <Skeleton className="h-5 w-full" />
+                  </CardContent>
+                </Card>
               </div>
-            </div>
-            <div className="w-full lg:w-1/2 space-y-6">
-              <Tabs
-                defaultValue="work"
-                className="w-full"
-                onValueChange={(value) =>
-                  handleModeChange(value as "work" | "shortBreak" | "longBreak")
-                }
-              >
-                <TabsList className="grid w-full grid-cols-3 p-0.5 dark:p-1">
-                  {Object.entries(TIMER_MODES).map(
-                    ([key, { label, icon: Icon }]) => (
-                      <TabsTrigger
-                        key={key}
-                        value={key}
-                        className="flex items-center gap-2 border mx-0.5 dark:border-0 dark:mx-0"
-                      >
-                        <Icon className="h-4 w-4 hidden sm:block" />
-                        <span>{label}</span>
-                      </TabsTrigger>
-                    )
-                  )}
-                </TabsList>
-              </Tabs>
-              <Card className="border-none bg-muted/80 dark:bg-muted/50">
-                <CardContent className="p-6">
-                  <div className="flex items-center gap-3 mb-4">
-                    {(() => {
-                      const Icon = TIMER_MODES[mode].icon;
-                      return (
-                        <Icon
-                          className="h-5 w-5"
-                          style={{ color: TIMER_MODES[mode].color }}
-                        />
-                      );
-                    })()}
-                    <CardTitle className="text-lg">
-                      {TIMER_MODES[mode].label} Mode
-                    </CardTitle>
-                  </div>
-                  <p className="text-muted-foreground">
-                    {TIMER_MODES[mode].description}
-                  </p>
-                </CardContent>
-              </Card>
-            </div>
-          </CardContent>
-        </Card>
-        <Card className="overflow-hidden group relative">
-          {isQuoteLoading ? (
+            </CardContent>
+          </Card>
+          <Card className="overflow-hidden">
             <div className="relative h-full">
-              <div className="absolute -right-20 -top-20 w-48 h-48 rounded-full blur-3xl opacity-10 bg-primary/10" />
               <CardContent className="p-6 pb-4 relative h-full flex flex-col">
                 <div className="flex mb-6">
                   <div className="w-full flex items-center justify-between gap-3">
@@ -703,88 +648,302 @@ export default function Pomodoro() {
                 </div>
               </CardContent>
             </div>
-          ) : (
-            <div className="relative h-full">
-              <div
-                className="absolute hidden md:block top-0 left-0 w-full h-1.5 bg-gradient-to-r md:bg-none"
-                style={{
-                  backgroundImage: `linear-gradient(to right, ${currentQuote.backgroundColor}50, ${currentQuote.backgroundColor}25)`,
-                }}
-              />
-              <div
-                className="absolute hidden md:block -right-20 -top-20 w-48 h-48 rounded-full blur-3xl opacity-20 bg-muted/50 md:bg-none"
-                style={{ backgroundColor: currentQuote.backgroundColor }}
-              />
+          </Card>
+        </div>
+      </div>
+    );
+  }
 
-              <CardContent className="p-6 pb-4 relative h-full flex flex-col">
-                <div className="flex mb-6">
-                  <div className="w-full flex items-center justify-between gap-3">
-                    <div
-                      className={cn(
-                        "p-2 rounded-xl bg-muted/50",
-                        `md:${
-                          QUOTE_COLORS[
-                            currentQuote.backgroundColor as keyof typeof QUOTE_COLORS
-                          ].bgLight
-                        }`
-                      )}
+  return (
+    <>
+      <audio ref={audioRef} src="/alarm.mp3" preload="auto" />
+      <div className="pb-2 space-y-6">
+        <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+          <div>
+            <h1 className="text-3xl font-light tracking-tight">
+              Pomodoro Timer
+            </h1>
+            <p className="text-muted-foreground mt-1 text-xl font-light">
+              Stay focused and maintain a healthy work-rest balance
+            </p>
+          </div>
+        </div>
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+          <Card className="lg:col-span-2">
+            <CardContent className="flex flex-col lg:flex-row items-center justify-between gap-8 pt-6">
+              <div className="w-full lg:w-1/2 flex flex-col items-center space-y-6">
+                <div className="w-60 h-60 sm:w-72 sm:h-72 relative">
+                  <CircularProgressbar
+                    value={progress}
+                    text={formatTime(timeLeft)}
+                    styles={buildStyles({
+                      textSize: "16px",
+                      pathColor: TIMER_MODES[mode].color,
+                      textColor: TIMER_MODES[mode].color,
+                      trailColor: "hsl(var(--muted) / 0.3)",
+                      pathTransitionDuration: 0.5,
+                      rotation: 0,
+                    })}
+                  />
+                  <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
+                    <div className="text-sm text-muted-foreground mt-16">
+                      {TIMER_MODES[mode].label} Time
+                    </div>
+                  </div>
+                </div>
+                <div className="flex gap-4">
+                  <TooltipProvider delayDuration={200}>
+                    <Tooltip>
+                      <TooltipTrigger asChild>
+                        <Button
+                          onClick={handleTimerControl}
+                          size="lg"
+                          className={`h-14 w-14 rounded-full p-0 transition-all ${
+                            isRunning
+                              ? "bg-destructive hover:bg-destructive/90"
+                              : "bg-primary hover:bg-primary/90"
+                          }`}
+                        >
+                          {isRunning ? (
+                            <Pause className="h-6 w-6" />
+                          ) : (
+                            <Play className="h-6 w-6 ml-0.5" />
+                          )}
+                        </Button>
+                      </TooltipTrigger>
+                      <TooltipContent>
+                        <p>{isRunning ? "Pause" : "Start"} timer</p>
+                      </TooltipContent>
+                    </Tooltip>
+                    <Tooltip>
+                      <TooltipTrigger asChild>
+                        <Button
+                          onClick={handleReset}
+                          variant="outline"
+                          size="icon"
+                          className="h-14 w-14 rounded-full"
+                        >
+                          <RotateCcw className="h-5 w-5" />
+                        </Button>
+                      </TooltipTrigger>
+                      <TooltipContent>Reset timer</TooltipContent>
+                    </Tooltip>
+                    <Dialog
+                      open={isSettingsOpen}
+                      onOpenChange={handleSettingsOpen}
                     >
+                      <Tooltip>
+                        <TooltipTrigger asChild>
+                          <DialogTrigger asChild>
+                            <Button
+                              variant="outline"
+                              size="icon"
+                              className="h-14 w-14 rounded-full"
+                            >
+                              <Settings className="h-5 w-5" />
+                            </Button>
+                          </DialogTrigger>
+                        </TooltipTrigger>
+                        <TooltipContent>Settings</TooltipContent>
+                      </Tooltip>
+                      <DialogContent className="sm:max-w-[400px]">
+                        <DialogHeader>
+                          <DialogTitle>Timer Settings</DialogTitle>
+                        </DialogHeader>
+                        <div className="grid gap-4 py-4">
+                          {Object.entries(tempSettings).map(([key, value]) => (
+                            <div key={key} className="grid gap-2">
+                              <Label htmlFor={key} className="capitalize">
+                                {key.replace(/([A-Z])/g, " $1").trim()} Time
+                                (minutes)
+                              </Label>
+                              <Input
+                                id={key}
+                                type="number"
+                                value={value}
+                                onChange={(e) =>
+                                  handleSettingChange(
+                                    key as keyof typeof tempSettings,
+                                    e.target.value
+                                  )
+                                }
+                                onKeyDown={(e) => {
+                                  const currentValue = e.currentTarget.value;
+                                  const newValue = currentValue + e.key;
+
+                                  if (
+                                    (![
+                                      "Backspace",
+                                      "Delete",
+                                      "ArrowLeft",
+                                      "ArrowRight",
+                                      "Tab",
+                                    ].includes(e.key) &&
+                                      !/^[0-9]$/.test(e.key)) ||
+                                    parseInt(newValue, 10) > 60
+                                  ) {
+                                    e.preventDefault();
+                                  }
+                                }}
+                                min={1}
+                                max={60}
+                                className="dark:bg-muted/50"
+                              />
+                            </div>
+                          ))}
+                        </div>
+                        <DialogFooter>
+                          <DialogClose asChild>
+                            <Button variant="outline">Cancel</Button>
+                          </DialogClose>
+                          <Button
+                            onClick={handleSaveSettings}
+                            disabled={isSavingSettings}
+                          >
+                            {isSavingSettings ? (
+                              <>
+                                <Loader2 className="h-4 w-4 animate-spin" />
+                                Saving...
+                              </>
+                            ) : (
+                              "Save Changes"
+                            )}
+                          </Button>
+                        </DialogFooter>
+                      </DialogContent>
+                    </Dialog>
+                  </TooltipProvider>
+                </div>
+              </div>
+              <div className="w-full lg:w-1/2 space-y-6">
+                <Tabs
+                  defaultValue={initialMode}
+                  className="w-full"
+                  onValueChange={(value) =>
+                    handleModeChange(
+                      value as "work" | "shortBreak" | "longBreak"
+                    )
+                  }
+                >
+                  <TabsList className="grid w-full grid-cols-3 p-0.5 dark:p-1">
+                    {Object.entries(TIMER_MODES).map(
+                      ([key, { label, icon: Icon }]) => (
+                        <TabsTrigger
+                          key={key}
+                          value={key}
+                          className="flex items-center gap-2 border mx-0.5 dark:border-0 dark:mx-0"
+                        >
+                          <Icon className="h-4 w-4 hidden sm:block" />
+                          <span>{label}</span>
+                        </TabsTrigger>
+                      )
+                    )}
+                  </TabsList>
+                </Tabs>
+                <Card className="border-none bg-muted/80 dark:bg-muted/50">
+                  <CardContent className="p-6">
+                    <div className="flex items-center gap-3 mb-4">
                       {(() => {
-                        const Icon = getIconComponent(currentQuote.icon);
+                        const Icon = TIMER_MODES[mode].icon;
                         return (
                           <Icon
-                            className={cn(
-                              "h-5 w-5",
-                              "text-foreground",
-                              `md:${
-                                QUOTE_COLORS[
-                                  currentQuote.backgroundColor as keyof typeof QUOTE_COLORS
-                                ].text
-                              }`
-                            )}
+                            className="h-5 w-5"
+                            style={{ color: TIMER_MODES[mode].color }}
                           />
                         );
                       })()}
+                      <CardTitle className="text-lg">
+                        {TIMER_MODES[mode].label} Mode
+                      </CardTitle>
                     </div>
-                    <Badge
-                      variant="outline"
-                      className={cn(
-                        "bg-muted/50",
-                        `md:${
-                          QUOTE_COLORS[
-                            currentQuote.backgroundColor as keyof typeof QUOTE_COLORS
-                          ].bgLight
-                        }`,
-                        `md:${
-                          QUOTE_COLORS[
-                            currentQuote.backgroundColor as keyof typeof QUOTE_COLORS
-                          ].text
-                        }`
-                      )}
-                    >
-                      {currentQuote.category}
-                    </Badge>
+                    <p className="text-muted-foreground">
+                      {TIMER_MODES[mode].description}
+                    </p>
+                  </CardContent>
+                </Card>
+              </div>
+            </CardContent>
+          </Card>
+          <Card className="overflow-hidden group relative">
+            {isQuoteLoading ? (
+              <div className="relative h-full">
+                <div className="absolute -right-20 -top-20 w-48 h-48 rounded-full blur-3xl opacity-10 bg-primary/10" />
+                <CardContent className="p-6 pb-4 relative h-full flex flex-col">
+                  <div className="flex mb-6">
+                    <div className="w-full flex items-center justify-between gap-3">
+                      <Skeleton className="h-9 w-9 rounded-xl" />
+                      <Skeleton className="h-6 w-24 rounded-full" />
+                    </div>
                   </div>
-                </div>
-                <div className="flex-grow">
-                  <div
-                    className={cn(
-                      "transition-opacity duration-200",
-                      isTransitioning ? "opacity-0" : "opacity-100"
-                    )}
-                  >
-                    <blockquote className="text-3xl font-light leading-relaxed mb-6 relative">
-                      {currentQuote.text}
-                    </blockquote>
+                  <div className="flex-grow space-y-4">
+                    <Skeleton className="h-8 w-[90%]" />
+                    <Skeleton className="h-8 w-[75%]" />
+                    <Skeleton className="h-8 w-[85%]" />
                   </div>
-                </div>
-                <div className="mt-auto space-y-4">
-                  <div className="pt-3">
-                    <div className="flex items-center gap-3">
+                  <div className="mt-auto space-y-4">
+                    <div className="pt-4">
+                      <div className="flex items-center gap-3">
+                        <Skeleton className="size-10 rounded-full" />
+                        <div className="space-y-2">
+                          <Skeleton className="h-5 w-32" />
+                          <Skeleton className="h-4 w-24" />
+                        </div>
+                      </div>
+                    </div>
+                    <div className="flex justify-between items-center pt-2">
+                      <Skeleton className="h-8 w-8 rounded-full" />
+                      <Skeleton className="h-8 w-8 rounded-full" />
+                    </div>
+                  </div>
+                </CardContent>
+              </div>
+            ) : (
+              <div className="relative h-full">
+                <div
+                  className="absolute hidden md:block top-0 left-0 w-full h-1.5 bg-gradient-to-r md:bg-none"
+                  style={{
+                    backgroundImage: `linear-gradient(to right, ${currentQuote.backgroundColor}50, ${currentQuote.backgroundColor}25)`,
+                  }}
+                />
+                <div
+                  className="absolute hidden md:block -right-20 -top-20 w-48 h-48 rounded-full blur-3xl opacity-20 bg-muted/50 md:bg-none"
+                  style={{ backgroundColor: currentQuote.backgroundColor }}
+                />
+
+                <CardContent className="p-6 pb-4 relative h-full flex flex-col">
+                  <div className="flex mb-6">
+                    <div className="w-full flex items-center justify-between gap-3">
                       <div
                         className={cn(
-                          "w-10 h-10 rounded-full flex items-center justify-center text-lg font-semibold",
-                          "bg-muted/50 text-foreground",
+                          "p-2 rounded-xl bg-muted/50",
+                          `md:${
+                            QUOTE_COLORS[
+                              currentQuote.backgroundColor as keyof typeof QUOTE_COLORS
+                            ].bgLight
+                          }`
+                        )}
+                      >
+                        {(() => {
+                          const Icon = getIconComponent(currentQuote.icon);
+                          return (
+                            <Icon
+                              className={cn(
+                                "h-5 w-5",
+                                "text-foreground",
+                                `md:${
+                                  QUOTE_COLORS[
+                                    currentQuote.backgroundColor as keyof typeof QUOTE_COLORS
+                                  ].text
+                                }`
+                              )}
+                            />
+                          );
+                        })()}
+                      </div>
+                      <Badge
+                        variant="outline"
+                        className={cn(
+                          "bg-muted/50",
                           `md:${
                             QUOTE_COLORS[
                               currentQuote.backgroundColor as keyof typeof QUOTE_COLORS
@@ -797,42 +956,80 @@ export default function Pomodoro() {
                           }`
                         )}
                       >
-                        {currentQuote.author.charAt(0)}
-                      </div>
-                      <div>
-                        <div className="font-medium">{currentQuote.author}</div>
-                        <div className="text-sm text-muted-foreground">
-                          {currentQuote.role}
+                        {currentQuote.category}
+                      </Badge>
+                    </div>
+                  </div>
+                  <div className="flex-grow">
+                    <div
+                      className={cn(
+                        "transition-opacity duration-200",
+                        isTransitioning ? "opacity-0" : "opacity-100"
+                      )}
+                    >
+                      <blockquote className="text-3xl font-light leading-relaxed mb-6 relative">
+                        {currentQuote.text}
+                      </blockquote>
+                    </div>
+                  </div>
+                  <div className="mt-auto space-y-4">
+                    <div className="pt-3">
+                      <div className="flex items-center gap-3">
+                        <div
+                          className={cn(
+                            "w-10 h-10 rounded-full flex items-center justify-center text-lg font-semibold",
+                            "bg-muted/50 text-foreground",
+                            `md:${
+                              QUOTE_COLORS[
+                                currentQuote.backgroundColor as keyof typeof QUOTE_COLORS
+                              ].bgLight
+                            }`,
+                            `md:${
+                              QUOTE_COLORS[
+                                currentQuote.backgroundColor as keyof typeof QUOTE_COLORS
+                              ].text
+                            }`
+                          )}
+                        >
+                          {currentQuote.author.charAt(0)}
+                        </div>
+                        <div>
+                          <div className="font-medium">
+                            {currentQuote.author}
+                          </div>
+                          <div className="text-sm text-muted-foreground">
+                            {currentQuote.role}
+                          </div>
                         </div>
                       </div>
                     </div>
+                    <div className="flex justify-between items-center pt-2">
+                      <Button
+                        variant="outline"
+                        size="icon"
+                        className="h-8 w-8 rounded-full"
+                        onClick={() => handleQuoteChange("prev")}
+                        disabled={isTransitioning}
+                      >
+                        <ChevronLeft className="h-4 w-4" />
+                      </Button>
+                      <Button
+                        variant="outline"
+                        size="icon"
+                        className="h-8 w-8 rounded-full"
+                        onClick={() => handleQuoteChange("next")}
+                        disabled={isTransitioning}
+                      >
+                        <ChevronRight className="h-4 w-4" />
+                      </Button>
+                    </div>
                   </div>
-                  <div className="flex justify-between items-center pt-2">
-                    <Button
-                      variant="outline"
-                      size="icon"
-                      className="h-8 w-8 rounded-full"
-                      onClick={() => handleQuoteChange("prev")}
-                      disabled={isTransitioning}
-                    >
-                      <ChevronLeft className="h-4 w-4" />
-                    </Button>
-                    <Button
-                      variant="outline"
-                      size="icon"
-                      className="h-8 w-8 rounded-full"
-                      onClick={() => handleQuoteChange("next")}
-                      disabled={isTransitioning}
-                    >
-                      <ChevronRight className="h-4 w-4" />
-                    </Button>
-                  </div>
-                </div>
-              </CardContent>
-            </div>
-          )}
-        </Card>
+                </CardContent>
+              </div>
+            )}
+          </Card>
+        </div>
       </div>
-    </div>
+    </>
   );
 }

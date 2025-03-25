@@ -25,7 +25,9 @@ export default function Layout({ children }: { children: React.ReactNode }) {
             </div>
           </div>
         </main>
-        <FloatingPomodoroTimer />
+        <div className="hidden md:block">
+          <FloatingPomodoroTimer />
+        </div>
       </div>
     </SidebarProvider>
   );

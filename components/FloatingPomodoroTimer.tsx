@@ -2,34 +2,52 @@
 
 import Link from "next/link";
 import { cn } from "@/lib/utils";
+import { Card } from "@/components/ui/card";
 import { usePathname } from "next/navigation";
 import { api } from "@/convex/_generated/api";
+import { Button } from "@/components/ui/button";
 import { useState, useEffect, useRef } from "react";
-import { Maximize2, Minimize2 } from "lucide-react";
+import { Progress } from "@/components/ui/progress";
 import { useQuery, useMutation } from "convex/react";
+import { Maximize2, Minimize2, Timer } from "lucide-react";
 
 const TIMER_MODES = {
-  work: { label: "Focus", color: "#33ca5a" },
-  shortBreak: { label: "Short Break", color: "#f59e0b" },
-  longBreak: { label: "Long Break", color: "#3b82f6" },
-};
+  work: {
+    label: "Focus Time",
+    color: "bg-green-500",
+    textColor: "text-green-500",
+  },
+  shortBreak: {
+    label: "Short Break",
+    color: "bg-yellow-500",
+    textColor: "text-yellow-500",
+  },
+  longBreak: {
+    label: "Long Break",
+    color: "bg-blue-500",
+    textColor: "text-blue-500",
+  },
+} as const;
 
 export function FloatingPomodoroTimer() {
   const pathname = usePathname();
-  const [isMinimized, setIsMinimized] = useState(false);
   const [currentTime, setCurrentTime] = useState(0);
+  const [isMinimized, setIsMinimized] = useState(false);
 
   const timerRef = useRef<NodeJS.Timeout | null>(null);
-  const lastUpdateTimeRef = useRef<number | null>(null);
-
   const activeSession = useQuery(api.pomodoro.getActiveSession);
   const updateSessionStatus = useMutation(api.pomodoro.updateSessionStatus);
   const completeSession = useMutation(api.pomodoro.completeSession);
 
+  const totalSeconds = activeSession?.totalSeconds || 1;
+  const progress = Math.min(
+    100,
+    Math.max(0, ((totalSeconds - currentTime) / totalSeconds) * 100)
+  );
+
   useEffect(() => {
     if (activeSession?.isRunning) {
       setCurrentTime(activeSession.remainingSeconds);
-      lastUpdateTimeRef.current = Date.now();
 
       timerRef.current = setInterval(() => {
         setCurrentTime((prevTime) => {
@@ -54,13 +72,11 @@ export function FloatingPomodoroTimer() {
       return () => {
         if (timerRef.current) {
           clearInterval(timerRef.current);
-          timerRef.current = null;
         }
       };
     } else {
       if (timerRef.current) {
         clearInterval(timerRef.current);
-        timerRef.current = null;
       }
       if (activeSession) {
         setCurrentTime(activeSession.remainingSeconds);
@@ -88,75 +104,81 @@ export function FloatingPomodoroTimer() {
     return `${mins}:${secs.toString().padStart(2, "0")}`;
   };
 
-  return (
-    <div
-      className={cn(
-        "fixed bottom-4 left-4 z-50 transition-all duration-200",
-        isMinimized ? "w-auto" : "w-[300px]"
-      )}
-    >
-      <div className="bg-background border rounded-lg shadow-lg">
-        {isMinimized ? (
-          <div className="p-3 flex items-center gap-3">
-            <div
-              className="w-2 h-2 rounded-full animate-pulse"
-              style={{
-                backgroundColor:
-                  TIMER_MODES[activeSession.mode as keyof typeof TIMER_MODES]
-                    .color,
-              }}
-            />
-            <span className="font-medium">{formatTime(currentTime)}</span>
-            <button
+  const currentMode =
+    TIMER_MODES[activeSession.mode as keyof typeof TIMER_MODES];
+
+  if (isMinimized) {
+    return (
+      <div className="fixed bottom-4 right-4 z-50">
+        <Card className="relative overflow-hidden w-[140px]">
+          <Progress
+            value={progress}
+            className={cn("h-1 rounded-none", currentMode.color)}
+          />
+          <div className="p-2 flex items-center justify-between">
+            <div className={cn("font-medium", currentMode.textColor)}>
+              {formatTime(currentTime)}
+            </div>
+            <Button
+              variant="ghost"
+              size="sm"
+              className="h-8 w-8 p-0"
               onClick={() => setIsMinimized(false)}
-              className="p-1 hover:bg-muted rounded"
             >
               <Maximize2 className="h-4 w-4" />
-            </button>
+            </Button>
           </div>
-        ) : (
+        </Card>
+      </div>
+    );
+  }
+
+  return (
+    <div className="fixed bottom-4 right-4 z-50">
+      <Card className="w-[300px] overflow-hidden">
+        <div className="relative">
+          <Progress
+            value={progress}
+            className={cn("h-1.5 rounded-none", currentMode.color)}
+          />
+
           <div className="p-4">
             <div className="flex items-center justify-between mb-3">
               <div className="flex items-center gap-2">
-                <div
-                  className="w-2 h-2 rounded-full animate-pulse"
-                  style={{
-                    backgroundColor:
-                      TIMER_MODES[
-                        activeSession.mode as keyof typeof TIMER_MODES
-                      ].color,
-                  }}
-                />
-                <span className="font-medium">
-                  {
-                    TIMER_MODES[activeSession.mode as keyof typeof TIMER_MODES]
-                      .label
-                  }
-                </span>
+                <Timer className={cn("h-4 w-4", currentMode.textColor)} />
+                <span className="text-sm font-medium">{currentMode.label}</span>
               </div>
-              <div className="flex items-center gap-1">
-                <button
-                  onClick={() => setIsMinimized(true)}
-                  className="p-1 hover:bg-muted rounded"
-                >
-                  <Minimize2 className="h-4 w-4" />
-                </button>
-              </div>
+              <Button
+                variant="ghost"
+                size="sm"
+                className="h-8 w-8 p-0"
+                onClick={() => setIsMinimized(true)}
+              >
+                <Minimize2 className="h-4 w-4" />
+              </Button>
             </div>
-            <div className="text-2xl font-medium text-center mb-3">
+
+            <div
+              className={cn(
+                "text-4xl font-semibold text-center my-4",
+                currentMode.textColor
+              )}
+            >
               {formatTime(currentTime)}
             </div>
-            <div className="flex items-center justify-between">
+
+            <div className="flex items-center justify-between text-sm text-muted-foreground">
               <Link
                 href="/pomodoro"
-                className="text-sm text-muted-foreground hover:text-foreground"
+                className="hover:text-foreground transition-colors"
               >
-                Open Timer
+                <Button variant="link">View Details</Button>
               </Link>
+              <span>{Math.round(progress)}% Complete</span>
             </div>
           </div>
-        )}
-      </div>
+        </div>
+      </Card>
     </div>
   );
 }
