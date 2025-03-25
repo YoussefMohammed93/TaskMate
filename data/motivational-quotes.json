@@ -1,0 +1,409 @@
+{
+  "quotes": [
+    {
+      "text": "The only way to do great work is to love what you do.",
+      "author": "Steve Jobs",
+      "role": "Co-founder of Apple Inc.",
+      "category": "passion",
+      "theme": "success",
+      "backgroundColor": "emerald",
+      "icon": "Heart"
+    },
+    {
+      "text": "Success is not final, failure is not fatal: it is the courage to continue that counts.",
+      "author": "Winston Churchill",
+      "role": "Former British Prime Minister",
+      "category": "perseverance",
+      "theme": "motivation",
+      "backgroundColor": "blue",
+      "icon": "Trophy"
+    },
+    {
+      "text": "The future belongs to those who believe in the beauty of their dreams.",
+      "author": "Eleanor Roosevelt",
+      "role": "Former First Lady of the United States",
+      "category": "dreams",
+      "theme": "inspiration",
+      "backgroundColor": "purple",
+      "icon": "Sparkles"
+    },
+    {
+      "text": "Innovation distinguishes between a leader and a follower.",
+      "author": "Steve Jobs",
+      "role": "Co-founder of Apple Inc.",
+      "category": "innovation",
+      "theme": "leadership",
+      "backgroundColor": "blue",
+      "icon": "Sparkles"
+    },
+    {
+      "text": "The best way to predict the future is to create it.",
+      "author": "Peter Drucker",
+      "role": "Management Consultant",
+      "category": "innovation",
+      "theme": "future",
+      "backgroundColor": "emerald",
+      "icon": "Sparkles"
+    },
+    {
+      "text": "Quality is not an act, it is a habit.",
+      "author": "Aristotle",
+      "role": "Greek Philosopher",
+      "category": "excellence",
+      "theme": "success",
+      "backgroundColor": "purple",
+      "icon": "Trophy"
+    },
+    {
+      "text": "The journey of a thousand miles begins with one step.",
+      "author": "Lao Tzu",
+      "role": "Chinese Philosopher",
+      "category": "perseverance",
+      "theme": "motivation",
+      "backgroundColor": "blue",
+      "icon": "Heart"
+    },
+    {
+      "text": "Believe you can and you're halfway there.",
+      "author": "Theodore Roosevelt",
+      "role": "26th U.S. President",
+      "category": "belief",
+      "theme": "inspiration",
+      "backgroundColor": "emerald",
+      "icon": "Sparkles"
+    },
+    {
+      "text": "Success usually comes to those who are too busy to be looking for it.",
+      "author": "Henry David Thoreau",
+      "role": "American Philosopher",
+      "category": "success",
+      "theme": "motivation",
+      "backgroundColor": "purple",
+      "icon": "Trophy"
+    },
+    {
+      "text": "The harder you work for something, the greater you'll feel when you achieve it.",
+      "author": "Anonymous",
+      "role": "Unknown",
+      "category": "hard work",
+      "theme": "success",
+      "backgroundColor": "blue",
+      "icon": "Trophy"
+    },
+    {
+      "text": "Don't watch the clock; do what it does. Keep going.",
+      "author": "Sam Levenson",
+      "role": "American Humorist",
+      "category": "persistence",
+      "theme": "motivation",
+      "backgroundColor": "emerald",
+      "icon": "Heart"
+    },
+    {
+      "text": "The future depends on what you do today.",
+      "author": "Mahatma Gandhi",
+      "role": "Indian Independence Leader",
+      "category": "action",
+      "theme": "future",
+      "backgroundColor": "purple",
+      "icon": "Sparkles"
+    },
+    {
+      "text": "The only limit to our realization of tomorrow will be our doubts of today.",
+      "author": "Franklin D. Roosevelt",
+      "role": "32nd U.S. President",
+      "category": "belief",
+      "theme": "inspiration",
+      "backgroundColor": "blue",
+      "icon": "Heart"
+    },
+    {
+      "text": "It does not matter how slowly you go as long as you do not stop.",
+      "author": "Confucius",
+      "role": "Chinese Philosopher",
+      "category": "perseverance",
+      "theme": "motivation",
+      "backgroundColor": "emerald",
+      "icon": "Trophy"
+    },
+    {
+      "text": "The best preparation for tomorrow is doing your best today.",
+      "author": "H. Jackson Brown Jr.",
+      "role": "American Author",
+      "category": "preparation",
+      "theme": "success",
+      "backgroundColor": "purple",
+      "icon": "Sparkles"
+    },
+    {
+      "text": "Success is walking from failure to failure with no loss of enthusiasm.",
+      "author": "Winston Churchill",
+      "role": "Former British Prime Minister",
+      "category": "perseverance",
+      "theme": "success",
+      "backgroundColor": "blue",
+      "icon": "Trophy"
+    },
+    {
+      "text": "The only person you are destined to become is the person you decide to be.",
+      "author": "Ralph Waldo Emerson",
+      "role": "American Philosopher",
+      "category": "self-determination",
+      "theme": "inspiration",
+      "backgroundColor": "emerald",
+      "icon": "Heart"
+    },
+    {
+      "text": "The difference between ordinary and extraordinary is that little extra.",
+      "author": "Jimmy Johnson",
+      "role": "Football Coach",
+      "category": "excellence",
+      "theme": "motivation",
+      "backgroundColor": "blue",
+      "icon": "Trophy"
+    },
+    {
+      "text": "Dream big and dare to fail.",
+      "author": "Norman Vaughan",
+      "role": "Explorer",
+      "category": "courage",
+      "theme": "inspiration",
+      "backgroundColor": "emerald",
+      "icon": "Heart"
+    },
+    {
+      "text": "The secret of getting ahead is getting started.",
+      "author": "Mark Twain",
+      "role": "American Author",
+      "category": "action",
+      "theme": "motivation",
+      "backgroundColor": "purple",
+      "icon": "Sparkles"
+    },
+    {
+      "text": "Your time is limited, don't waste it living someone else's life.",
+      "author": "Steve Jobs",
+      "role": "Co-founder of Apple Inc.",
+      "category": "authenticity",
+      "theme": "inspiration",
+      "backgroundColor": "blue",
+      "icon": "Heart"
+    },
+    {
+      "text": "The expert in anything was once a beginner.",
+      "author": "Helen Hayes",
+      "role": "American Actress",
+      "category": "growth",
+      "theme": "motivation",
+      "backgroundColor": "emerald",
+      "icon": "Trophy"
+    },
+    {
+      "text": "Success is not in what you have, but who you are.",
+      "author": "Bo Bennett",
+      "role": "Businessman",
+      "category": "success",
+      "theme": "inspiration",
+      "backgroundColor": "purple",
+      "icon": "Sparkles"
+    },
+    {
+      "text": "The way to get started is to quit talking and begin doing.",
+      "author": "Walt Disney",
+      "role": "Entrepreneur",
+      "category": "action",
+      "theme": "motivation",
+      "backgroundColor": "blue",
+      "icon": "Trophy"
+    },
+    {
+      "text": "Don't be afraid to give up the good to go for the great.",
+      "author": "John D. Rockefeller",
+      "role": "Industrialist",
+      "category": "courage",
+      "theme": "success",
+      "backgroundColor": "emerald",
+      "icon": "Heart"
+    },
+    {
+      "text": "The future rewards those who press on.",
+      "author": "Barack Obama",
+      "role": "44th U.S. President",
+      "category": "perseverance",
+      "theme": "motivation",
+      "backgroundColor": "purple",
+      "icon": "Sparkles"
+    },
+    {
+      "text": "Life is 10% what happens to you and 90% how you react to it.",
+      "author": "Charles R. Swindoll",
+      "role": "Pastor",
+      "category": "attitude",
+      "theme": "inspiration",
+      "backgroundColor": "blue",
+      "icon": "Heart"
+    },
+    {
+      "text": "The only impossible journey is the one you never begin.",
+      "author": "Tony Robbins",
+      "role": "Motivational Speaker",
+      "category": "action",
+      "theme": "motivation",
+      "backgroundColor": "emerald",
+      "icon": "Trophy"
+    },
+    {
+      "text": "Change your thoughts and you change your world.",
+      "author": "Norman Vincent Peale",
+      "role": "Author",
+      "category": "mindset",
+      "theme": "inspiration",
+      "backgroundColor": "purple",
+      "icon": "Sparkles"
+    },
+    {
+      "text": "Every setback is a setup for a comeback.",
+      "author": "Kobe Bryant",
+      "role": "Basketball Legend",
+      "category": "resilience",
+      "theme": "motivation",
+      "backgroundColor": "red",
+      "icon": "Trophy"
+    },
+    {
+      "text": "Turn your wounds into wisdom.",
+      "author": "Oprah Winfrey",
+      "role": "Media Executive",
+      "category": "growth",
+      "theme": "inspiration",
+      "backgroundColor": "orange",
+      "icon": "Sparkles"
+    },
+    {
+      "text": "Creativity is intelligence having fun.",
+      "author": "Albert Einstein",
+      "role": "Theoretical Physicist",
+      "category": "creativity",
+      "theme": "inspiration",
+      "backgroundColor": "pink",
+      "icon": "Heart"
+    },
+    {
+      "text": "Fall seven times, stand up eight.",
+      "author": "Japanese Proverb",
+      "role": "Traditional Wisdom",
+      "category": "resilience",
+      "theme": "motivation",
+      "backgroundColor": "red",
+      "icon": "Sparkles"
+    },
+    {
+      "text": "The best time to plant a tree was 20 years ago. The second best time is now.",
+      "author": "Chinese Proverb",
+      "role": "Traditional Wisdom",
+      "category": "action",
+      "theme": "motivation",
+      "backgroundColor": "orange",
+      "icon": "Heart"
+    },
+    {
+      "text": "Dream bigger. Do bigger.",
+      "author": "Ruth Carter",
+      "role": "Costume Designer",
+      "category": "ambition",
+      "theme": "inspiration",
+      "backgroundColor": "pink",
+      "icon": "Trophy"
+    },
+    {
+      "text": "The harder you work for something, the greater you'll feel when you achieve it.",
+      "author": "Anonymous",
+      "role": "Common Wisdom",
+      "category": "hard-work",
+      "theme": "motivation",
+      "backgroundColor": "emerald",
+      "icon": "Trophy"
+    },
+    {
+      "text": "Your attitude determines your direction.",
+      "author": "Ralph Waldo Emerson",
+      "role": "American Philosopher",
+      "category": "mindset",
+      "theme": "inspiration",
+      "backgroundColor": "blue",
+      "icon": "Sparkles"
+    },
+    {
+      "text": "Small steps lead to big changes.",
+      "author": "Unknown",
+      "role": "Common Wisdom",
+      "category": "progress",
+      "theme": "motivation",
+      "backgroundColor": "purple",
+      "icon": "Heart"
+    },
+    {
+      "text": "Innovation distinguishes between a leader and a follower.",
+      "author": "Steve Jobs",
+      "role": "Co-founder of Apple Inc.",
+      "category": "innovation",
+      "theme": "success",
+      "backgroundColor": "red",
+      "icon": "Sparkles"
+    },
+    {
+      "text": "The only limit to our realization of tomorrow will be our doubts of today.",
+      "author": "Franklin D. Roosevelt",
+      "role": "32nd U.S. President",
+      "category": "belief",
+      "theme": "inspiration",
+      "backgroundColor": "orange",
+      "icon": "Trophy"
+    },
+    {
+      "text": "Quality is not an act, it is a habit.",
+      "author": "Aristotle",
+      "role": "Greek Philosopher",
+      "category": "excellence",
+      "theme": "success",
+      "backgroundColor": "pink",
+      "icon": "Heart"
+    },
+    {
+      "text": "The journey of a thousand miles begins with one step.",
+      "author": "Lao Tzu",
+      "role": "Chinese Philosopher",
+      "category": "beginnings",
+      "theme": "motivation",
+      "backgroundColor": "emerald",
+      "icon": "Sparkles"
+    },
+    {
+      "text": "Success is not the key to happiness. Happiness is the key to success.",
+      "author": "Albert Schweitzer",
+      "role": "Theologian",
+      "category": "happiness",
+      "theme": "inspiration",
+      "backgroundColor": "blue",
+      "icon": "Heart"
+    },
+    {
+      "text": "Champions keep playing until they get it right.",
+      "author": "Billie Jean King",
+      "role": "Tennis Champion",
+      "category": "perseverance",
+      "theme": "motivation",
+      "backgroundColor": "purple",
+      "icon": "Trophy"
+    },
+    {
+      "text": "What you do today can improve all your tomorrows.",
+      "author": "Ralph Marston",
+      "role": "Professional Author",
+      "category": "action",
+      "theme": "success",
+      "backgroundColor": "red",
+      "icon": "Sparkles"
+    }
+  ]
+}

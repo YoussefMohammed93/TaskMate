@@ -1083,7 +1083,7 @@ export default function Goals() {
             </CardContent>
           </Card>
         </div>
-        <div className="flex w-full gap-4 sm:w-auto">
+        <div className="flex w-full gap-4 sm:w-auto my-5">
           <Select
             value={selectedCategory}
             onValueChange={(value: GoalCategory) => setSelectedCategory(value)}
@@ -1131,7 +1131,7 @@ export default function Goals() {
             </TabsTrigger>
           </TabsList>
           <TabsContent value="active" className="space-y-4">
-            <div className="flex flex-col items-center justify-center min-h-[400px] p-8 text-center">
+            <div className="flex flex-col items-center justify-center min-h-[100px] p-8 text-center">
               <div className="relative mb-6">
                 <div className="absolute inset-0 bg-primary/5 blur-xl rounded-full" />
                 <div className="relative p-6 bg-secondary dark:bg-muted/50 backdrop-blur-sm rounded-full ring-1 ring-border/50">
@@ -1193,7 +1193,7 @@ export default function Goals() {
             </div>
           </TabsContent>
           <TabsContent value="completed" className="space-y-4">
-            <div className="flex flex-col items-center justify-center min-h-[400px] p-8 text-center">
+            <div className="flex flex-col items-center justify-center min-h-[100px] p-8 text-center">
               <div className="relative mb-6">
                 <div className="absolute inset-0 bg-primary/5 blur-xl rounded-full" />
                 <div className="relative p-6 bg-secondary dark:bg-muted/50 backdrop-blur-sm rounded-full ring-1 ring-border/50">
@@ -1256,7 +1256,7 @@ export default function Goals() {
             </div>
           </TabsContent>
           <TabsContent value="upcoming" className="space-y-4">
-            <div className="flex flex-col items-center justify-center min-h-[400px] p-8 text-center">
+            <div className="flex flex-col items-center justify-center min-h-[100px] p-8 text-center">
               <div className="relative mb-6">
                 <div className="absolute inset-0 bg-primary/5 blur-xl rounded-full" />
                 <div className="relative p-6 bg-secondary dark:bg-muted/50 backdrop-blur-sm rounded-full ring-1 ring-border/50">

@@ -84,7 +84,12 @@ import { DeleteTaskDialog } from "./components/delete-task-dialog";
 import { EditSubtaskDialog } from "./components/edit-subtask-dialog";
 import { Calendar as CalendarComponent } from "@/components/ui/calendar";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from "@/components/ui/tooltip";
 
 type Tag = {
   id: string;
@@ -1275,7 +1280,8 @@ export default function Tasks() {
                                     variant="outline"
                                     className="h-8 w-8"
                                     disabled={
-                                      isEditingSubtaskId === subtask.id.toString()
+                                      isEditingSubtaskId ===
+                                      subtask.id.toString()
                                     }
                                     onClick={() =>
                                       setEditingSubtask({
@@ -1284,7 +1290,8 @@ export default function Tasks() {
                                       })
                                     }
                                   >
-                                    {isEditingSubtaskId === subtask.id.toString() ? (
+                                    {isEditingSubtaskId ===
+                                    subtask.id.toString() ? (
                                       <Loader2 className="h-3 w-3 animate-spin" />
                                     ) : (
                                       <Pencil className="h-3 w-3" />
@@ -1303,7 +1310,8 @@ export default function Tasks() {
                                     variant="outline"
                                     className="h-8 w-8 text-destructive hover:text-destructive"
                                     disabled={
-                                      isDeletingSubtaskId === subtask.id.toString()
+                                      isDeletingSubtaskId ===
+                                      subtask.id.toString()
                                     }
                                     onClick={() =>
                                       setDeletingSubtask({
@@ -1312,7 +1320,8 @@ export default function Tasks() {
                                       })
                                     }
                                   >
-                                    {isDeletingSubtaskId === subtask.id.toString() ? (
+                                    {isDeletingSubtaskId ===
+                                    subtask.id.toString() ? (
                                       <Loader2 className="h-3 w-3 animate-spin" />
                                     ) : (
                                       <Trash2 className="h-3 w-3" />
@@ -1882,7 +1891,10 @@ export default function Tasks() {
             onOpenChange={setIsNewTaskDialogOpen}
           >
             <DialogTrigger asChild>
-              <Button variant="outline" className="w-full sm:w-auto dark:bg-muted/50">
+              <Button
+                variant="outline"
+                className="w-full sm:w-auto dark:bg-muted/50"
+              >
                 <Plus className="h-4 w-4" />
                 <span>New Task</span>
               </Button>
