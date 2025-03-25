@@ -25,36 +25,36 @@ const steps = [
     title: "Create Your Workspace",
     description:
       "Set up your personalized workspace and organize your tasks into custom categories.",
-    color: "text-blue-500",
-    bgColor: "bg-blue-500/5 dark:bg-blue-500/10",
-    borderColor: "group-hover:border-blue-500/50",
+    color: "md:text-blue-500",
+    bgColor: "md:bg-blue-500/5 md:dark:bg-blue-500/10",
+    borderColor: "md:group-hover:border-blue-500/50",
   },
   {
     icon: Timer,
     title: "Set Your Schedule",
     description:
       "Configure your Pomodoro intervals and break times to match your work style and preferences.",
-    color: "text-green-500",
-    bgColor: "bg-green-500/5 dark:bg-green-500/10",
-    borderColor: "group-hover:border-green-500/50",
+    color: "md:text-green-500",
+    bgColor: "md:bg-green-500/5 md:dark:bg-green-500/10",
+    borderColor: "md:group-hover:border-green-500/50",
   },
   {
     icon: Settings,
-    title: "Customize Features",
+    title: "Customize Your Theme",
     description:
-      "Customize your notifications, theme preferences, and productivity settings to suit your needs.",
-    color: "text-purple-500",
-    bgColor: "bg-purple-500/5 dark:bg-purple-500/10",
-    borderColor: "group-hover:border-purple-500/50",
+      "Choose between light and dark modes, or let the app match your system preferences.",
+    color: "md:text-purple-500",
+    bgColor: "md:bg-purple-500/5 md:dark:bg-purple-500/10",
+    borderColor: "md:group-hover:border-purple-500/50",
   },
   {
-    icon: Check,
-    title: "Track Progress",
+    icon: CircleCheck,
+    title: "Track Your Progress",
     description:
-      "Monitor your productivity metrics and achieve your daily goals efficiently with TaskMate.",
-    color: "text-pink-500",
-    bgColor: "bg-pink-500/5 dark:bg-pink-500/10",
-    borderColor: "group-hover:border-pink-500/50",
+      "Monitor your productivity metrics and celebrate your achievements.",
+    color: "md:text-pink-500",
+    bgColor: "md:bg-pink-500/5 md:dark:bg-pink-500/10",
+    borderColor: "md:group-hover:border-pink-500/50",
   },
 ];
 
@@ -146,11 +146,11 @@ export function HowItWorks() {
     >
       <div
         role="presentation"
-        className="dark:block absolute top-1/4 -left-64 w-96 h-96 bg-blue-500/10 rounded-full blur-3xl"
+        className="md:dark:block hidden md:block absolute top-1/4 -left-64 w-96 h-96 bg-blue-500/10 rounded-full blur-3xl"
       />
       <div
         role="presentation"
-        className="dark:block absolute bottom-1/4 -right-64 w-96 h-96 bg-green-500/10 rounded-full blur-3xl"
+        className="md:dark:block hidden md:block absolute bottom-1/4 -right-64 w-96 h-96 bg-green-500/10 rounded-full blur-3xl"
       />
       <div className="relative mx-auto max-w-[1260px] px-5">
         <div className="text-center mb-16">

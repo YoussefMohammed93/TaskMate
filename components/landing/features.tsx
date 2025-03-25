@@ -16,48 +16,48 @@ const features = [
     title: "Task Management",
     description:
       "Organize your tasks with intuitive drag-and-drop interfaces and smart categorization.",
-    color: "text-blue-500",
-    bgColor: "bg-blue-500/5 dark:bg-blue-500/10",
+    color: "md:text-blue-500",
+    bgColor: "md:bg-blue-500/5 md:dark:bg-blue-500/10",
   },
   {
     icon: Clock,
     title: "Pomodoro Timer",
     description:
       "Boost productivity with customizable focus sessions and break intervals.",
-    color: "text-red-500",
-    bgColor: "bg-red-500/5 dark:bg-red-500/10",
+    color: "md:text-red-500",
+    bgColor: "md:bg-red-500/5 md:dark:bg-red-500/10",
   },
   {
     icon: Brain,
     title: "Mind Mapping",
     description:
       "Visualize your ideas and connect thoughts with interactive mind maps.",
-    color: "text-purple-500",
-    bgColor: "bg-purple-500/5 dark:bg-purple-500/10",
+    color: "md:text-purple-500",
+    bgColor: "md:bg-purple-500/5 md:dark:bg-purple-500/10",
   },
   {
     icon: MessageSquareMore,
     title: "Smart Notes",
     description:
       "Create, organize, and link your notes with powerful formatting options.",
-    color: "text-green-500",
-    bgColor: "bg-green-500/5 dark:bg-green-500/10",
+    color: "md:text-green-500",
+    bgColor: "md:bg-green-500/5 md:dark:bg-green-500/10",
   },
   {
     icon: Target,
     title: "Goal Tracking",
     description:
       "Set, monitor, and achieve your goals with progress visualization.",
-    color: "text-orange-500",
-    bgColor: "bg-orange-500/5 dark:bg-orange-500/10",
+    color: "md:text-orange-500",
+    bgColor: "md:bg-orange-500/5 md:dark:bg-orange-500/10",
   },
   {
     icon: Sparkles,
     title: "AI Assistant",
     description:
       "Get intelligent suggestions and task optimization recommendations.",
-    color: "text-pink-500",
-    bgColor: "bg-pink-500/5 dark:bg-pink-500/10",
+    color: "md:text-pink-500",
+    bgColor: "md:bg-pink-500/5 md:dark:bg-pink-500/10",
   },
 ];
 
@@ -70,11 +70,11 @@ export function Features() {
     >
       <div
         role="presentation"
-        className="dark:block absolute top-1/4 -left-64 w-96 h-96 bg-pink-500/15 rounded-full blur-3xl"
+        className="md:dark:block hidden md:block absolute top-1/4 -left-64 w-96 h-96 bg-pink-500/15 rounded-full blur-3xl"
       />
       <div
         role="presentation"
-        className="dark:block absolute top-1/4 -right-64 w-96 h-96 bg-purple-500/10 rounded-full blur-3xl"
+        className="md:dark:block hidden md:block absolute top-1/4 -right-64 w-96 h-96 bg-purple-500/10 rounded-full blur-3xl"
       />
       <div className="relative mx-auto max-w-[1280px] px-5">
         <div className="text-center mb-16">

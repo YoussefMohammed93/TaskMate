@@ -50,11 +50,11 @@ export function Hero() {
     >
       <div
         role="presentation"
-        className="absolute top-24 -left-64 w-96 h-96 bg-sky-500/15 dark:bg-primary/15 rounded-full blur-3xl"
+        className="absolute hidden md:block top-24 -left-64 w-96 h-96 bg-sky-500/15 dark:bg-primary/15 rounded-full blur-3xl"
       />
       <div
         role="presentation"
-        className="absolute top-12 -right-64 w-96 h-96 bg-orange-500/10 dark:bg-primary/10 rounded-full blur-3xl"
+        className="absolute hidden md:block top-12 -right-64 w-96 h-96 bg-orange-500/10 dark:bg-primary/10 rounded-full blur-3xl"
       />
       <div className="relative text-center mx-auto max-w-[1280px] px-5">
         <div

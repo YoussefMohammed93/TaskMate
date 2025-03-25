@@ -77,11 +77,11 @@ export function ContactUs() {
     >
       <div
         role="presentation"
-        className="absolute top-1/4 -left-64 w-96 h-96 bg-blue-500/10 rounded-full blur-3xl"
+        className="absolute hidden md:block top-1/4 -left-64 w-96 h-96 bg-blue-500/10 rounded-full blur-3xl"
       />
       <div
         role="presentation"
-        className="absolute bottom-1/4 -right-64 w-96 h-96 bg-red-500/10 rounded-full blur-3xl"
+        className="absolute hidden md:block bottom-1/4 -right-64 w-96 h-96 bg-red-500/10 rounded-full blur-3xl"
       />
       <div className="relative mx-auto max-w-[1280px] px-5">
         <div className="max-w-2xl mx-auto text-center mb-16">
